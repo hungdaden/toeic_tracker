@@ -1,0 +1,173 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
+import '../providers/user_provider.dart';
+import 'package:intl/intl.dart';
+import 'add_score_screen.dart';
+import 'learning_path_screen.dart';
+
+class DashboardScreen extends StatelessWidget {
+  const DashboardScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<UserProvider>(
+      builder: (context, provider, child) {
+        final currentUser = provider.currentUser;
+        if (currentUser == null) return const Center(child: Text('Đang tải hồ sơ...'));
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundImage: currentUser.avatarPath != null ? FileImage(File(currentUser.avatarPath!)) : null,
+                  child: currentUser.avatarPath == null ? Text(currentUser.name[0], style: const TextStyle(fontSize: 12)) : null,
+                ),
+                const SizedBox(width: 8),
+                Text(currentUser.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+              ],
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.route),
+                onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const LearningPathScreen()));
+                },
+                tooltip: 'Lộ trình học',
+              )
+            ],
+          ),
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (provider.latestScore != null)
+                _buildLatestScoreCard(context, provider.latestScore),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Text('Lịch sử thi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+              if (currentUser.scores.isEmpty)
+                const Expanded(
+                  child: Center(
+                    child: Text('Chưa có dữ liệu điểm.\nHãy thêm điểm mới!', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+                  ),
+                )
+              else
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: currentUser.scores.length,
+                    itemBuilder: (context, index) {
+                      final score = currentUser.scores[index];
+                      return Slidable(
+                        key: Key(score.id),
+                        endActionPane: ActionPane(
+                          motion: const ScrollMotion(),
+                          children: [
+                            SlidableAction(
+                              onPressed: (_) {
+                                Navigator.push(context, MaterialPageRoute(
+                                  builder: (_) => AddScoreScreen(existingScore: score),
+                                ));
+                              },
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              icon: Icons.edit,
+                              label: 'Sửa',
+                              borderRadius: const BorderRadius.only(topLeft: Radius.circular(10), bottomLeft: Radius.circular(10)),
+                            ),
+                            SlidableAction(
+                              onPressed: (_) {
+                                provider.deleteScore(score.id);
+                              },
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              icon: Icons.delete,
+                              label: 'Xóa',
+                              borderRadius: const BorderRadius.only(topRight: Radius.circular(10), bottomRight: Radius.circular(10)),
+                            ),
+                          ],
+                        ),
+                        child: Card(
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: Theme.of(context).colorScheme.primary.withAlpha(51),
+                              child: Text('${score.totalScore}', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 13)),
+                            ),
+                            title: Text(DateFormat('dd/MM/yyyy').format(score.date)),
+                            subtitle: Text('Listening: ${score.listeningScore} | Reading: ${score.readingScore}'),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AddScoreScreen()));
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Nhập điểm'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            foregroundColor: Colors.white,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLatestScoreCard(BuildContext context, latest) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Theme.of(context).colorScheme.primary.withAlpha(204), const Color(0xFF3949AB)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Theme.of(context).colorScheme.primary.withAlpha(51), blurRadius: 10, offset: const Offset(0, 5))
+        ],
+      ),
+      child: Column(
+        children: [
+          const Text('ĐIỂM GẦN NHẤT', style: TextStyle(color: Colors.white70, fontSize: 14)),
+          const SizedBox(height: 8),
+          Text('${latest.totalScore}', style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Column(children: [const Icon(Icons.headphones, color: Colors.white), const SizedBox(height: 4), Text('${latest.listeningScore}', style: const TextStyle(color: Colors.white, fontSize: 20))]),
+              Container(width: 1, height: 40, color: Colors.white30),
+              Column(children: [const Icon(Icons.menu_book, color: Colors.white), const SizedBox(height: 4), Text('${latest.readingScore}', style: const TextStyle(color: Colors.white, fontSize: 20))]),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const LearningPathScreen()));
+              },
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('Xem Lộ Trình Đề Xuất', style: TextStyle(fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF3949AB),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              ),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
