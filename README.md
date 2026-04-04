@@ -1,6 +1,10 @@
 # toeic_tracker
 
 A new Flutter project.
+Made for tracking and developing Toeic point!!
+
+
+
 
 ## Getting Started
 
