@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../models/user_model.dart';
 import '../providers/user_provider.dart';
 import 'main_screen.dart';
+import 'edit_user_screen.dart';
 
 class UserListScreen extends StatefulWidget {
   const UserListScreen({super.key});
@@ -63,14 +64,42 @@ class _UserListScreenState extends State<UserListScreen> {
                     showDialog(
                       context: context,
                       builder: (c) => AlertDialog(
-                        title: const Text('Xóa hồ sơ?'),
-                        content: Text('Bạn có chắc muốn xóa hồ sơ của ${user.name}?'),
+                        title: const Text('Tùy Chọn Hồ Sơ'),
+                        content: Text('Bạn muốn làm gì với hồ sơ của ${user.name}?'),
                         actions: [
-                          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Hủy')),
-                          TextButton(onPressed: () {
-                            provider.deleteUser(user.id);
-                            Navigator.pop(c);
-                          }, child: const Text('Xóa', style: TextStyle(color: Colors.red))),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(c);
+                              showDialog(
+                                context: context,
+                                builder: (context) => EditUserDialog(user: user),
+                              );
+                            },
+                            child: const Text('Chỉnh sửa'),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(c);
+                              showDialog(
+                                context: context,
+                                builder: (d) => AlertDialog(
+                                  title: const Text('Xóa hồ sơ?'),
+                                  content: Text('Bạn có chắc muốn xóa hồ sơ của ${user.name}?'),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(d), child: const Text('Hủy')),
+                                    TextButton(
+                                      onPressed: () {
+                                        provider.deleteUser(user.id);
+                                        Navigator.pop(d);
+                                      },
+                                      child: const Text('Xóa', style: TextStyle(color: Colors.red)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text('Xóa', style: TextStyle(color: Colors.red)),
+                          ),
                         ],
                       )
                     );

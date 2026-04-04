@@ -50,6 +50,18 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateUser(UserModel updatedUser) async {
+    final index = _users.indexWhere((u) => u.id == updatedUser.id);
+    if (index != -1) {
+      _users[index] = updatedUser;
+      if (_currentUser?.id == updatedUser.id) {
+        _currentUser = updatedUser;
+      }
+      await saveToPrefs();
+      notifyListeners();
+    }
+  }
+
   Future<void> deleteUser(String id) async {
     _users.removeWhere((u) => u.id == id);
     if (_currentUser?.id == id) {

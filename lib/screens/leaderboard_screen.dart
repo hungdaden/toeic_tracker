@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import '../models/user_model.dart';
+import 'package:intl/intl.dart';
 
 class LeaderboardScreen extends StatelessWidget {
   const LeaderboardScreen({super.key});
@@ -12,16 +13,15 @@ class LeaderboardScreen extends StatelessWidget {
     final provider = context.watch<UserProvider>();
     final users = provider.users;
     
-    // Sort users by highest total score
+    // Add all scores from all users to rankings
     List<Map<String, dynamic>> rankings = [];
     for (var user in users) {
-      if (user.scores.isNotEmpty) {
-        final maxScore = user.scores.fold(0, (max, score) => score.totalScore > max ? score.totalScore : max);
-        rankings.add({'user': user, 'maxScore': maxScore});
+      for (var score in user.scores) {
+        rankings.add({'user': user, 'score': score});
       }
     }
 
-    rankings.sort((a, b) => (b['maxScore'] as int).compareTo((a['maxScore'] as int)));
+    rankings.sort((a, b) => (b['score'].totalScore as int).compareTo((a['score'].totalScore as int)));
 
     return Scaffold(
       appBar: AppBar(title: const Text('Bảng Vàng TOEIC')),
@@ -33,7 +33,9 @@ class LeaderboardScreen extends StatelessWidget {
               itemBuilder: (context, index) {
                 final userMap = rankings[index];
                 final UserModel user = userMap['user'];
-                final int score = userMap['maxScore'];
+                final scoreObj = userMap['score'];
+                final int score = scoreObj.totalScore;
+                final DateTime date = scoreObj.date;
                 
                 // Colors for top 3
                 Color? cardColor;
@@ -70,6 +72,7 @@ class LeaderboardScreen extends StatelessWidget {
                         ]
                       ],
                     ),
+                    subtitle: Text('Ngày thi: ${DateFormat('dd/MM/yyyy').format(date)}', style: const TextStyle(color: Colors.grey)),
                     trailing: Text('$score', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
                   ),
                 );
