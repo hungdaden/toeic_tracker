@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:confetti/confetti.dart';
 import '../providers/user_provider.dart';
 import 'package:intl/intl.dart';
 import 'add_score_screen.dart';
@@ -17,6 +18,41 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   ToeicScore? _viewedScore;
+  late ConfettiController _confettiController;
+  OverlayEntry? _overlayEntry;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 8));
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
+  }
+
+  void _showAimHitOverlay() {
+    if (_overlayEntry != null) return;
+    
+    _confettiController.play();
+    _overlayEntry = OverlayEntry(
+      builder: (context) {
+        return _AimHitOverlay(
+          confettiController: _confettiController,
+          onDismiss: _removeOverlay,
+        );
+      },
+    );
+
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _removeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,10 +120,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           motion: const ScrollMotion(),
                           children: [
                             SlidableAction(
-                              onPressed: (_) {
-                                Navigator.push(context, MaterialPageRoute(
+                              onPressed: (_) async {
+                                final result = await Navigator.push(context, MaterialPageRoute(
                                   builder: (_) => AddScoreScreen(existingScore: score),
                                 ));
+                                if (result == true && mounted) {
+                                  _showAimHitOverlay();
+                                }
                               },
                               backgroundColor: Colors.blue,
                               foregroundColor: Colors.white,
@@ -133,8 +172,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const AddScoreScreen()));
+            onPressed: () async {
+              final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => const AddScoreScreen()));
+              if (result == true && mounted) {
+                _showAimHitOverlay();
+              }
             },
             icon: const Icon(Icons.add),
             label: const Text('Nhập điểm'),
@@ -214,6 +256,100 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _AimHitOverlay extends StatefulWidget {
+  final ConfettiController confettiController;
+  final VoidCallback onDismiss;
+
+  const _AimHitOverlay({required this.confettiController, required this.onDismiss});
+
+  @override
+  State<_AimHitOverlay> createState() => _AimHitOverlayState();
+}
+
+class _AimHitOverlayState extends State<_AimHitOverlay> {
+  double _opacity = 1.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _startFadeOutTimer();
+  }
+
+  void _startFadeOutTimer() async {
+    await Future.delayed(const Duration(seconds: 8));
+    if (mounted) {
+      setState(() => _opacity = 0.0);
+    }
+    await Future.delayed(const Duration(seconds: 1));
+    if (mounted) {
+      widget.onDismiss();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        setState(() => _opacity = 0.0);
+        Future.delayed(const Duration(milliseconds: 300), () {
+            if (mounted) widget.onDismiss();
+        });
+      },
+      child: Material(
+        color: Colors.black.withOpacity(0.4),
+        child: AnimatedOpacity(
+          opacity: _opacity,
+          duration: const Duration(milliseconds: 500),
+          child: Stack(
+            children: [
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: ConfettiWidget(
+                  confettiController: widget.confettiController,
+                  blastDirection: -3.14 / 2, // UP
+                  maxBlastForce: 120, // Tăng lực bắn
+                  minBlastForce: 50,
+                  emissionFrequency: 0.2, // Tần suất bắn dày đặc
+                  numberOfParticles: 80, // Nhiều pháo hoa hơn
+                  gravity: 0.15,
+                  colors: const [Colors.red, Colors.blue, Colors.green, Colors.yellow, Colors.pink, Colors.purple, Colors.orange],
+                ),
+              ),
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  margin: const EdgeInsets.symmetric(horizontal: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Sự cố gắng cuối cùng cũng được đền đáp rồi! Chúc mừng bạn đã đạt được mức Aim <3',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFFFF3366), // Màu hồng đỏ tươi tắn
+                          shadows: [
+                            Shadow(color: Colors.pinkAccent.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 3)),
+                          ]
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

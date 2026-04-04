@@ -36,13 +36,17 @@ class _AddScoreScreenState extends State<AddScoreScreen> {
         listeningScore: _listeningScore,
         readingScore: _readingScore,
       );
-      
+      final userProvider = context.read<UserProvider>();
       if (widget.existingScore != null) {
-        context.read<UserProvider>().updateScore(newScore);
+        userProvider.updateScore(newScore);
       } else {
-        context.read<UserProvider>().addScore(newScore);
+        userProvider.addScore(newScore);
       }
-      Navigator.pop(context);
+      
+      final targetScore = userProvider.currentUser?.targetScore ?? 500;
+      final isHitAim = newScore.totalScore >= targetScore;
+      
+      Navigator.pop(context, isHitAim);
     }
   }
 

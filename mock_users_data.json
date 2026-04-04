@@ -3,6 +3,7 @@
     "id": "user_hoa_002",
     "name": "Hoa béo",
     "dateOfBirth": "2004-04-25T00:00:00.000Z",
+    "targetScore": 750,
     "avatarPath": null,
     "scores": [
       {
@@ -41,6 +42,7 @@
     "id": "user_hung_001",
     "name": "Hưng",
     "dateOfBirth": "2004-01-20T00:00:00.000Z",
+    "targetScore": 800,
     "avatarPath": null,
     "scores": [
       {

@@ -78,7 +78,28 @@ class _UserCardState extends State<_UserCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(user.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      Row(
+                        children: [
+                          Flexible(child: Text(user.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+                          if (user.currentStreak >= 3)
+                            Container(
+                              margin: const EdgeInsets.only(left: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.orange),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.local_fire_department, color: Colors.orange, size: 16),
+                                  const SizedBox(width: 4),
+                                  Text('${user.currentStreak}', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
                       Text('Ngày sinh: ${DateFormat('dd/MM/yyyy').format(user.dateOfBirth)}', style: const TextStyle(color: Colors.grey)),
                     ],
                   ),

@@ -18,6 +18,7 @@ class EditUserDialog extends StatefulWidget {
 class _EditUserDialogState extends State<EditUserDialog> {
   final _formKey = GlobalKey<FormState>();
   late String _name;
+  late int _targetScore;
   late DateTime _dob;
   String? _avatarPath;
 
@@ -25,6 +26,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
   void initState() {
     super.initState();
     _name = widget.user.name;
+    _targetScore = widget.user.targetScore;
     _dob = widget.user.dateOfBirth;
     _avatarPath = widget.user.avatarPath;
   }
@@ -45,6 +47,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
       final updatedUser = UserModel(
         id: widget.user.id,
         name: _name,
+        targetScore: _targetScore,
         dateOfBirth: _dob,
         avatarPath: _avatarPath,
         scores: widget.user.scores,
@@ -79,6 +82,19 @@ class _EditUserDialogState extends State<EditUserDialog> {
                 decoration: const InputDecoration(labelText: 'Tên hiển thị'),
                 validator: (val) => val == null || val.isEmpty ? 'Vui lòng nhập tên' : null,
                 onSaved: (val) => _name = val!,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                initialValue: _targetScore.toString(),
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Mức Aim (Mục tiêu)', suffixText: 'điểm'),
+                validator: (val) {
+                   if (val == null || val.isEmpty) return 'Vui lòng nhập Mức Aim';
+                   final score = int.tryParse(val);
+                   if (score == null || score < 0 || score > 990) return 'Aim không hợp lệ (0-990)';
+                   return null;
+                },
+                onSaved: (val) => _targetScore = int.parse(val!),
               ),
               const SizedBox(height: 16),
               ListTile(

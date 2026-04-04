@@ -131,6 +131,7 @@ class AddUserDialog extends StatefulWidget {
 class _AddUserDialogState extends State<AddUserDialog> {
   final _formKey = GlobalKey<FormState>();
   String _name = '';
+  int _targetScore = 500;
   DateTime _dob = DateTime.now();
   String? _avatarPath;
 
@@ -150,6 +151,7 @@ class _AddUserDialogState extends State<AddUserDialog> {
       final user = UserModel(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: _name,
+        targetScore: _targetScore,
         dateOfBirth: _dob,
         avatarPath: _avatarPath,
       );
@@ -182,6 +184,19 @@ class _AddUserDialogState extends State<AddUserDialog> {
                 decoration: const InputDecoration(labelText: 'Tên hiển thị'),
                 validator: (val) => val == null || val.isEmpty ? 'Vui lòng nhập tên' : null,
                 onSaved: (val) => _name = val!,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                initialValue: _targetScore.toString(),
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Mức Aim (Mục tiêu)', suffixText: 'điểm'),
+                validator: (val) {
+                   if (val == null || val.isEmpty) return 'Vui lòng nhập Mức Aim';
+                   final score = int.tryParse(val);
+                   if (score == null || score < 0 || score > 990) return 'Aim không hợp lệ (0-990)';
+                   return null;
+                },
+                onSaved: (val) => _targetScore = int.parse(val!),
               ),
               const SizedBox(height: 16),
               ListTile(
