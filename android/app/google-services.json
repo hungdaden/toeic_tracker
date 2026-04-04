@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "865926846836",
+    "project_id": "toeic-tracker-52828",
+    "storage_bucket": "toeic-tracker-52828.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:865926846836:android:143e5a9dbc039b2b01b421",
+        "android_client_info": {
+          "package_name": "com.example.toeic_tracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAZmNJifjm8a6hYa9A6XP4qfrqqEE2OICM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
