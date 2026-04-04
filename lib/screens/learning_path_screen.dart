@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
+import '../models/toeic_score.dart';
 
 class LearningPathScreen extends StatelessWidget {
-  const LearningPathScreen({super.key});
+  final ToeicScore? targetScore;
+  const LearningPathScreen({super.key, this.targetScore});
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<UserProvider>();
-    final latestScore = provider.latestScore;
+    final scoreToUse = targetScore ?? provider.latestScore;
 
-    if (latestScore == null) {
+    if (scoreToUse == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Lộ Trình Học')),
         body: const Center(
@@ -19,7 +21,7 @@ class LearningPathScreen extends StatelessWidget {
       );
     }
 
-    final total = latestScore.totalScore;
+    final total = scoreToUse.totalScore;
     String level;
     String description;
     List<String> advice;
@@ -79,29 +81,58 @@ class LearningPathScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  Text(level, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: levelColor)),
+                  Text(
+                    level,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: levelColor,
+                    ),
+                  ),
                   const SizedBox(height: 12),
-                  Text(description, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)),
+                  Text(
+                    description,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 16),
+                  ),
                   const Divider(height: 30, color: Colors.white24),
-                  Text('Kết quả gần nhất: $total', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(
+                    targetScore != null
+                        ? 'Kết quả đang xem: $total'
+                        : 'Kết quả gần nhất: $total',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text('Listening: ${latestScore.listeningScore}  |  Reading: ${latestScore.readingScore}', style: const TextStyle(color: Colors.grey)),
+                  Text(
+                    'Listening: ${scoreToUse.listeningScore}  |  Reading: ${scoreToUse.readingScore}',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
             const Align(
               alignment: Alignment.centerLeft,
-              child: Text('Nhiệm vụ trọng tâm:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              child: Text(
+                'Nhiệm vụ trọng tâm:',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ),
             const SizedBox(height: 12),
-            ...advice.map((e) => Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                leading: Icon(Icons.auto_awesome, color: levelColor),
-                title: Text(e, style: const TextStyle(fontSize: 15)),
-              ),
-            )).toList(),
+            ...advice
+                .map(
+                  (e) => Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      leading: Icon(Icons.auto_awesome, color: levelColor),
+                      title: Text(e, style: const TextStyle(fontSize: 15)),
+                    ),
+                  ),
+                )
+                .toList(),
           ],
         ),
       ),

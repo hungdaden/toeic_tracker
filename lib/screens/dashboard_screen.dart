@@ -6,16 +6,33 @@ import '../providers/user_provider.dart';
 import 'package:intl/intl.dart';
 import 'add_score_screen.dart';
 import 'learning_path_screen.dart';
+import '../models/toeic_score.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  ToeicScore? _viewedScore;
 
   @override
   Widget build(BuildContext context) {
     return Consumer<UserProvider>(
       builder: (context, provider, child) {
         final currentUser = provider.currentUser;
-        if (currentUser == null) return const Center(child: Text('Đang tải hồ sơ...'));
+        if (currentUser == null) {
+          return const Center(child: Text('Vui lòng chọn hoặc tạo hồ sơ ở tab Hồ Sơ'));
+        }
+
+        // If _viewedScore is selected but gets deleted, we should clear it
+        if (_viewedScore != null && !currentUser.scores.any((s) => s.id == _viewedScore!.id)) {
+          _viewedScore = null;
+        }
+
+        final displayScore = _viewedScore ?? provider.latestScore;
 
         return Scaffold(
           appBar: AppBar(
@@ -34,7 +51,7 @@ class DashboardScreen extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.route),
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const LearningPathScreen()));
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => LearningPathScreen(targetScore: displayScore)));
                 },
                 tooltip: 'Lộ trình học',
               )
@@ -43,11 +60,11 @@ class DashboardScreen extends StatelessWidget {
           body: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (provider.latestScore != null)
-                _buildLatestScoreCard(context, provider.latestScore),
+              if (displayScore != null)
+                _buildLatestScoreCard(context, displayScore),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: Text('Lịch sử thi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                child: Text('Lịch sử thi (Nhấn để xem)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
               if (currentUser.scores.isEmpty)
                 const Expanded(
@@ -90,15 +107,23 @@ class DashboardScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                        child: Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: Theme.of(context).colorScheme.primary.withAlpha(51),
-                              child: Text('${score.totalScore}', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 13)),
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _viewedScore = score;
+                            });
+                          },
+                          child: Card(
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: Theme.of(context).colorScheme.primary.withAlpha(51),
+                                child: Text('${score.totalScore}', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 13)),
+                              ),
+                              title: Text(DateFormat('dd/MM/yyyy').format(score.date)),
+                              subtitle: Text('Listening: ${score.listeningScore} | Reading: ${score.readingScore}'),
+                              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
                             ),
-                            title: Text(DateFormat('dd/MM/yyyy').format(score.date)),
-                            subtitle: Text('Listening: ${score.listeningScore} | Reading: ${score.readingScore}'),
                           ),
                         ),
                       );
@@ -121,7 +146,8 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLatestScoreCard(BuildContext context, latest) {
+  Widget _buildLatestScoreCard(BuildContext context, ToeicScore displayedScore) {
+    bool isViewingPast = _viewedScore != null;
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
@@ -136,36 +162,57 @@ class DashboardScreen extends StatelessWidget {
           BoxShadow(color: Theme.of(context).colorScheme.primary.withAlpha(51), blurRadius: 10, offset: const Offset(0, 5))
         ],
       ),
-      child: Column(
+      child: Stack(
         children: [
-          const Text('ĐIỂM GẦN NHẤT', style: TextStyle(color: Colors.white70, fontSize: 14)),
-          const SizedBox(height: 8),
-          Text('${latest.totalScore}', style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+          Column(
             children: [
-              Column(children: [const Icon(Icons.headphones, color: Colors.white), const SizedBox(height: 4), Text('${latest.listeningScore}', style: const TextStyle(color: Colors.white, fontSize: 20))]),
-              Container(width: 1, height: 40, color: Colors.white30),
-              Column(children: [const Icon(Icons.menu_book, color: Colors.white), const SizedBox(height: 4), Text('${latest.readingScore}', style: const TextStyle(color: Colors.white, fontSize: 20))]),
+              Text(
+                isViewingPast ? 'ĐIỂM NGÀY ${DateFormat('dd/MM/yyyy').format(displayedScore.date)}' : 'ĐIỂM GẦN NHẤT', 
+                style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold)
+              ),
+              const SizedBox(height: 8),
+              Text('${displayedScore.totalScore}', style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  Column(children: [const Icon(Icons.headphones, color: Colors.white), const SizedBox(height: 4), Text('${displayedScore.listeningScore}', style: const TextStyle(color: Colors.white, fontSize: 20))]),
+                  Container(width: 1, height: 40, color: Colors.white30),
+                  Column(children: [const Icon(Icons.menu_book, color: Colors.white), const SizedBox(height: 4), Text('${displayedScore.readingScore}', style: const TextStyle(color: Colors.white, fontSize: 20))]),
+                ],
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => LearningPathScreen(targetScore: displayedScore)));
+                  },
+                  icon: const Icon(Icons.auto_awesome),
+                  label: const Text('Xem Lộ Trình Đề Xuất', style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF3949AB),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  ),
+                ),
+              )
             ],
           ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const LearningPathScreen()));
-              },
-              icon: const Icon(Icons.auto_awesome),
-              label: const Text('Xem Lộ Trình Đề Xuất', style: TextStyle(fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF3949AB),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+          if (isViewingPast)
+            Positioned(
+              top: -10,
+              left: -10,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () {
+                  setState(() {
+                    _viewedScore = null;
+                  });
+                },
+                tooltip: 'Trở về điểm hiện tại',
               ),
             ),
-          )
         ],
       ),
     );

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../models/toeic_score.dart';
@@ -27,6 +28,18 @@ class UserProvider with ChangeNotifier {
     if (usersJson != null) {
       final List<dynamic> decoded = json.decode(usersJson);
       _users = decoded.map((e) => UserModel.fromJson(e)).toList();
+    } else {
+      try {
+        final mockDataString = await rootBundle.loadString('assets/mock_users_data.json');
+        final List<dynamic> decoded = json.decode(mockDataString);
+        _users = decoded.map((e) => UserModel.fromJson(e)).toList();
+        
+        // Lưu lại ngay vào SharedPreferences để các lần sau không cần tải lại file mock
+        final String encoded = json.encode(_users.map((e) => e.toJson()).toList());
+        await prefs.setString('toeic_users', encoded);
+      } catch (e) {
+        debugPrint('Could not load mock users data: $e');
+      }
     }
 
     _isLoading = false;

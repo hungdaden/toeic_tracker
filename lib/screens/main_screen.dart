@@ -24,12 +24,7 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (context.watch<UserProvider>().currentUser == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const UserListScreen()));
-      });
-      return const Scaffold();
-    }
+    // removed auto redirect
 
     return Scaffold(
       body: _pages[_currentIndex],

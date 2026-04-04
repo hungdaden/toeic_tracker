@@ -1,0 +1,78 @@
+[
+  {
+    "id": "user_hoa_002",
+    "name": "Hoa béo",
+    "dateOfBirth": "2004-04-25T00:00:00.000Z",
+    "avatarPath": null,
+    "scores": [
+      {
+        "id": "score_hoa_1",
+        "date": "2026-03-25T00:00:00.000Z",
+        "listeningScore": 405,
+        "readingScore": 300
+      },
+      {
+        "id": "score_hoa_2",
+        "date": "2026-03-28T00:00:00.000Z",
+        "listeningScore": 350,
+        "readingScore": 310
+      },
+      {
+        "id": "score_hoa_3",
+        "date": "2026-03-29T00:00:00.000Z",
+        "listeningScore": 370,
+        "readingScore": 250
+      },
+      {
+        "id": "score_hoa_4",
+        "date": "2026-03-31T00:00:00.000Z",
+        "listeningScore": 385,
+        "readingScore": 320
+      },
+      {
+        "id": "score_hoa_5",
+        "date": "2026-04-03T00:00:00.000Z",
+        "listeningScore": 380,
+        "readingScore": 330
+      }
+    ]
+  },
+  {
+    "id": "user_hung_001",
+    "name": "Hưng",
+    "dateOfBirth": "2004-01-20T00:00:00.000Z",
+    "avatarPath": null,
+    "scores": [
+      {
+        "id": "score_hung_1",
+        "date": "2026-03-25T00:00:00.000Z",
+        "listeningScore": 375,
+        "readingScore": 330
+      },
+      {
+        "id": "score_hung_2",
+        "date": "2026-03-28T00:00:00.000Z",
+        "listeningScore": 385,
+        "readingScore": 350
+      },
+      {
+        "id": "score_hung_3",
+        "date": "2026-03-29T00:00:00.000Z",
+        "listeningScore": 415,
+        "readingScore": 300
+      },
+      {
+        "id": "score_hung_4",
+        "date": "2026-03-31T00:00:00.000Z",
+        "listeningScore": 400,
+        "readingScore": 360
+      },
+      {
+        "id": "score_hung_5",
+        "date": "2026-04-03T00:00:00.000Z",
+        "listeningScore": 440,
+        "readingScore": 270
+      }
+    ]
+  }
+]
