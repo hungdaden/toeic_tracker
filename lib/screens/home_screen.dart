@@ -12,13 +12,11 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tổng Quan Học Tập'),
-      ),
+      appBar: AppBar(title: const Text('Tổng Quan Học Tập')),
       body: Consumer<UserProvider>(
         builder: (context, provider, child) {
           final users = provider.users;
-          
+
           if (users.isEmpty) {
             return const Center(child: Text('Chưa có hồ sơ nào.'));
           }
@@ -68,9 +66,16 @@ class _UserCardState extends State<_UserCard> {
               children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundImage: user.avatarPath != null ? FileImage(File(user.avatarPath!)) : null,
-                  child: user.avatarPath == null 
-                      ? Text(user.name.isNotEmpty ? user.name[0].toUpperCase() : '?', style: const TextStyle(fontSize: 24)) 
+                  backgroundImage: user.avatarUrl != null
+                      ? NetworkImage(user.avatarUrl!)
+                      : null,
+                  child: user.avatarUrl == null
+                      ? Text(
+                          user.name.isNotEmpty
+                              ? user.name[0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(fontSize: 24),
+                        )
                       : null,
                 ),
                 const SizedBox(width: 16),
@@ -80,11 +85,23 @@ class _UserCardState extends State<_UserCard> {
                     children: [
                       Row(
                         children: [
-                          Flexible(child: Text(user.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+                          Flexible(
+                            child: Text(
+                              user.name,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                           if (user.currentStreak >= 3)
                             Container(
                               margin: const EdgeInsets.only(left: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.orange.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(12),
@@ -92,15 +109,29 @@ class _UserCardState extends State<_UserCard> {
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.local_fire_department, color: Colors.orange, size: 16),
+                                  const Icon(
+                                    Icons.local_fire_department,
+                                    color: Colors.orange,
+                                    size: 16,
+                                  ),
                                   const SizedBox(width: 4),
-                                  Text('${user.currentStreak}', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
+                                  Text(
+                                    '${user.currentStreak}',
+                                    style: const TextStyle(
+                                      color: Colors.orange,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
                         ],
                       ),
-                      Text('Ngày sinh: ${DateFormat('dd/MM/yyyy').format(user.dateOfBirth)}', style: const TextStyle(color: Colors.grey)),
+                      Text(
+                        'Ngày sinh: ${DateFormat('dd/MM/yyyy').format(user.dateOfBirth)}',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
                     ],
                   ),
                 ),
@@ -108,32 +139,54 @@ class _UserCardState extends State<_UserCard> {
             ),
             const Divider(height: 32),
             if (displayScores.isNotEmpty) ...[
-              const Text('Các điểm thi gần nhất:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const Text(
+                'Các điểm thi gần nhất:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
               const SizedBox(height: 8),
-              ...displayScores.map((score) => Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                      Text('Ngày thi: ${DateFormat('dd/MM/yyyy').format(score.date)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+              ...displayScores
+                  .map(
+                    (score) => Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildScoreCard('Listening', score.listeningScore, Colors.blue),
-                          _buildScoreCard('Reading', score.readingScore, Colors.orange),
-                          _buildScoreCard('Tổng điểm', score.totalScore, Colors.green),
+                          Text(
+                            'Ngày thi: ${DateFormat('dd/MM/yyyy').format(score.date)}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _buildScoreCard(
+                                'Listening',
+                                score.listeningScore,
+                                Colors.blue,
+                              ),
+                              _buildScoreCard(
+                                'Reading',
+                                score.readingScore,
+                                Colors.orange,
+                              ),
+                              _buildScoreCard(
+                                'Tổng điểm',
+                                score.totalScore,
+                                Colors.green,
+                              ),
+                            ],
+                          ),
                         ],
                       ),
-                  ]
-                )
-              )).toList(),
+                    ),
+                  )
+                  .toList(),
               if (scores.length > 3)
                 Center(
                   child: TextButton(
@@ -142,16 +195,21 @@ class _UserCardState extends State<_UserCard> {
                         _isExpanded = !_isExpanded;
                       });
                     },
-                    child: Text(_isExpanded ? 'Thu gọn' : 'Xem tất cả (${scores.length})'),
+                    child: Text(
+                      _isExpanded ? 'Thu gọn' : 'Xem tất cả (${scores.length})',
+                    ),
                   ),
                 ),
             ] else ...[
               const Center(
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 16.0),
-                  child: Text('Chưa có dữ liệu điểm thi.', style: TextStyle(fontStyle: FontStyle.italic)),
+                  child: Text(
+                    'Chưa có dữ liệu điểm thi.',
+                    style: TextStyle(fontStyle: FontStyle.italic),
+                  ),
                 ),
-              )
+              ),
             ],
           ],
         ),
@@ -161,11 +219,16 @@ class _UserCardState extends State<_UserCard> {
 
   Widget _buildScoreCard(String title, int score, Color defaultColor) {
     // If it's not total score and is less than 300, make it red.
-    final color = (title != 'Tổng điểm' && score < 300) ? Colors.red : defaultColor;
+    final color = (title != 'Tổng điểm' && score < 300)
+        ? Colors.red
+        : defaultColor;
 
     return Column(
       children: [
-        Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: color)),
+        Text(
+          title,
+          style: TextStyle(fontWeight: FontWeight.bold, color: color),
+        ),
         const SizedBox(height: 4),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -176,7 +239,11 @@ class _UserCardState extends State<_UserCard> {
           ),
           child: Text(
             score.toString(),
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
         ),
       ],

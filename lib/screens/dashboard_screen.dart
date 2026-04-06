@@ -81,10 +81,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 CircleAvatar(
                   radius: 16,
-                  backgroundImage: currentUser.avatarPath != null
-                      ? FileImage(File(currentUser.avatarPath!))
+                  backgroundImage: currentUser.avatarUrl != null
+                      ? NetworkImage(currentUser.avatarUrl!)
                       : null,
-                  child: currentUser.avatarPath == null
+                  child: currentUser.avatarUrl == null
                       ? Text(
                           currentUser.name[0],
                           style: const TextStyle(fontSize: 12),

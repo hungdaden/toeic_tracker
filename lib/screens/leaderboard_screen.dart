@@ -12,7 +12,7 @@ class LeaderboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<UserProvider>();
     final users = provider.users;
-    
+
     // Add all scores from all users to rankings
     List<Map<String, dynamic>> rankings = [];
     for (var user in users) {
@@ -21,12 +21,21 @@ class LeaderboardScreen extends StatelessWidget {
       }
     }
 
-    rankings.sort((a, b) => (b['score'].totalScore as int).compareTo((a['score'].totalScore as int)));
+    rankings.sort(
+      (a, b) => (b['score'].totalScore as int).compareTo(
+        (a['score'].totalScore as int),
+      ),
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('Bảng Vàng TOEIC')),
-      body: rankings.isEmpty 
-          ? const Center(child: Text('Chưa có dữ liệu điểm nào để xếp hạng.', style: TextStyle(color: Colors.grey)))
+      body: rankings.isEmpty
+          ? const Center(
+              child: Text(
+                'Chưa có dữ liệu điểm nào để xếp hạng.',
+                style: TextStyle(color: Colors.grey),
+              ),
+            )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: rankings.length,
@@ -36,7 +45,7 @@ class LeaderboardScreen extends StatelessWidget {
                 final scoreObj = userMap['score'];
                 final int score = scoreObj.totalScore;
                 final DateTime date = scoreObj.date;
-                
+
                 // Colors for top 3
                 Color? cardColor;
                 IconData? medalIcon;
@@ -60,20 +69,40 @@ class LeaderboardScreen extends StatelessWidget {
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundImage: user.avatarPath != null ? FileImage(File(user.avatarPath!)) : null,
-                      child: user.avatarPath == null ? Text(user.name[0].toUpperCase()) : null,
+                      backgroundImage: user.avatarUrl != null
+                          ? NetworkImage(user.avatarUrl!)
+                          : null,
+                      child: user.avatarUrl == null
+                          ? Text(user.name[0].toUpperCase())
+                          : null,
                     ),
                     title: Row(
                       children: [
-                        Text(user.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        Text(
+                          user.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
                         if (medalIcon != null) ...[
                           const SizedBox(width: 8),
-                          Icon(medalIcon, color: medalColor)
-                        ]
+                          Icon(medalIcon, color: medalColor),
+                        ],
                       ],
                     ),
-                    subtitle: Text('Ngày thi: ${DateFormat('dd/MM/yyyy').format(date)}', style: const TextStyle(color: Colors.grey)),
-                    trailing: Text('$score', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+                    subtitle: Text(
+                      'Ngày thi: ${DateFormat('dd/MM/yyyy').format(date)}',
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                    trailing: Text(
+                      '$score',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blueAccent,
+                      ),
+                    ),
                   ),
                 );
               },

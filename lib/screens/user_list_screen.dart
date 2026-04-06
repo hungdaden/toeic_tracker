@@ -1,12 +1,14 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../models/user_model.dart';
 import '../providers/user_provider.dart';
 import 'main_screen.dart';
 import 'edit_user_screen.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import '../services/storage_service.dart';
 
 class UserListScreen extends StatefulWidget {
   const UserListScreen({super.key});
@@ -17,26 +19,24 @@ class UserListScreen extends StatefulWidget {
 
 class _UserListScreenState extends State<UserListScreen> {
   void _openAddUserDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => const AddUserDialog(),
-    );
+    showDialog(context: context, builder: (context) => const AddUserDialog());
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chọn Hồ Sơ Học Tập'),
-      ),
+      appBar: AppBar(title: const Text('Chọn Hồ Sơ Học Tập')),
       body: Consumer<UserProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
-             return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
           if (provider.users.isEmpty) {
             return const Center(
-              child: Text('Chưa có hồ sơ học tập nào.\nHãy tạo mới để bắt đầu!', textAlign: TextAlign.center),
+              child: Text(
+                'Chưa có hồ sơ học tập nào.\nHãy tạo mới để bắt đầu!',
+                textAlign: TextAlign.center,
+              ),
             );
           }
           return ListView.builder(
@@ -50,29 +50,52 @@ class _UserListScreenState extends State<UserListScreen> {
                   contentPadding: const EdgeInsets.all(12),
                   leading: CircleAvatar(
                     radius: 25,
-                    backgroundImage: user.avatarPath != null ? FileImage(File(user.avatarPath!)) : null,
-                    child: user.avatarPath == null ? Text(user.name.isNotEmpty ? user.name[0].toUpperCase() : '?', style: const TextStyle(fontSize: 20)) : null,
+                    backgroundImage: user.avatarUrl != null
+                        ? NetworkImage(user.avatarUrl!)
+                        : null,
+                    child: user.avatarUrl == null
+                        ? Text(
+                            user.name.isNotEmpty
+                                ? user.name[0].toUpperCase()
+                                : '?',
+                            style: const TextStyle(fontSize: 20),
+                          )
+                        : null,
                   ),
-                  title: Text(user.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                  subtitle: Text('Ngày sinh: ${DateFormat('dd/MM/yyyy').format(user.dateOfBirth)}'),
+                  title: Text(
+                    user.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Ngày sinh: ${DateFormat('dd/MM/yyyy').format(user.dateOfBirth)}',
+                  ),
                   trailing: const Icon(Icons.login),
                   onTap: () {
                     provider.setCurrentUser(user);
-                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainScreen()));
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MainScreen()),
+                    );
                   },
                   onLongPress: () {
                     showDialog(
                       context: context,
                       builder: (c) => AlertDialog(
                         title: const Text('Tùy Chọn Hồ Sơ'),
-                        content: Text('Bạn muốn làm gì với hồ sơ của ${user.name}?'),
+                        content: Text(
+                          'Bạn muốn làm gì với hồ sơ của ${user.name}?',
+                        ),
                         actions: [
                           TextButton(
                             onPressed: () {
                               Navigator.pop(c);
                               showDialog(
                                 context: context,
-                                builder: (context) => EditUserDialog(user: user),
+                                builder: (context) =>
+                                    EditUserDialog(user: user),
                               );
                             },
                             child: const Text('Chỉnh sửa'),
@@ -84,24 +107,35 @@ class _UserListScreenState extends State<UserListScreen> {
                                 context: context,
                                 builder: (d) => AlertDialog(
                                   title: const Text('Xóa hồ sơ?'),
-                                  content: Text('Bạn có chắc muốn xóa hồ sơ của ${user.name}?'),
+                                  content: Text(
+                                    'Bạn có chắc muốn xóa hồ sơ của ${user.name}?',
+                                  ),
                                   actions: [
-                                    TextButton(onPressed: () => Navigator.pop(d), child: const Text('Hủy')),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(d),
+                                      child: const Text('Hủy'),
+                                    ),
                                     TextButton(
                                       onPressed: () {
                                         provider.deleteUser(user.id);
                                         Navigator.pop(d);
                                       },
-                                      child: const Text('Xóa', style: TextStyle(color: Colors.red)),
+                                      child: const Text(
+                                        'Xóa',
+                                        style: TextStyle(color: Colors.red),
+                                      ),
                                     ),
                                   ],
                                 ),
                               );
                             },
-                            child: const Text('Xóa', style: TextStyle(color: Colors.red)),
+                            child: const Text(
+                              'Xóa',
+                              style: TextStyle(color: Colors.red),
+                            ),
                           ),
                         ],
-                      )
+                      ),
                     );
                   },
                 ),
@@ -130,30 +164,62 @@ class AddUserDialog extends StatefulWidget {
 
 class _AddUserDialogState extends State<AddUserDialog> {
   final _formKey = GlobalKey<FormState>();
+
+  // Tạo sẵn ID cho user mới để gán cho tên ảnh trên Firebase
+  final String _newUserId = DateTime.now().millisecondsSinceEpoch.toString();
+
   String _name = '';
   int _targetScore = 500;
   DateTime _dob = DateTime.now();
-  String? _avatarPath;
+
+  String? _avatarUrl; // Đổi thành avatarUrl
+  bool _isUploading = false; // Thêm trạng thái loading
 
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
     if (image != null) {
+      setState(() => _isUploading = true);
+
+      Uint8List imageBytes = await image.readAsBytes();
+
+      StorageService storageService = StorageService();
+
+      String? downloadUrl = await storageService.uploadAvatar(
+        imageBytes,
+        _newUserId,
+      );
+
       setState(() {
-        _avatarPath = image.path;
+        _isUploading = false;
+        if (downloadUrl != null) {
+          _avatarUrl = downloadUrl; // Gán link web
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Lỗi tải ảnh lên!')));
+        }
       });
     }
   }
 
   void _save() {
     if (_formKey.currentState!.validate()) {
+      if (_isUploading) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Đang tải ảnh lên, vui lòng chờ...')),
+        );
+        return;
+      }
+
       _formKey.currentState!.save();
       final user = UserModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: _newUserId, // Dùng ID đã tạo ở trên
         name: _name,
         targetScore: _targetScore,
         dateOfBirth: _dob,
-        avatarPath: _avatarPath,
+        avatarUrl: _avatarUrl, // Lưu link web
       );
       context.read<UserProvider>().addUser(user);
       Navigator.pop(context);
@@ -171,37 +237,55 @@ class _AddUserDialogState extends State<AddUserDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               GestureDetector(
-                onTap: _pickImage,
+                onTap: _isUploading ? null : _pickImage,
                 child: CircleAvatar(
                   radius: 40,
-                  backgroundColor: Theme.of(context).colorScheme.primary.withAlpha(51),
-                  backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
-                  child: _avatarPath == null ? const Icon(Icons.add_a_photo, size: 30) : null,
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.primary.withAlpha(51),
+                  // Dùng NetworkImage
+                  backgroundImage: _avatarUrl != null
+                      ? NetworkImage(_avatarUrl!)
+                      : null,
+                  // Hiện loading nếu đang upload
+                  child: _isUploading
+                      ? const CircularProgressIndicator()
+                      : (_avatarUrl == null
+                            ? const Icon(Icons.add_a_photo, size: 30)
+                            : null),
                 ),
               ),
               const SizedBox(height: 16),
               TextFormField(
                 decoration: const InputDecoration(labelText: 'Tên hiển thị'),
-                validator: (val) => val == null || val.isEmpty ? 'Vui lòng nhập tên' : null,
+                validator: (val) =>
+                    val == null || val.isEmpty ? 'Vui lòng nhập tên' : null,
                 onSaved: (val) => _name = val!,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 initialValue: _targetScore.toString(),
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Mức Aim (Mục tiêu)', suffixText: 'điểm'),
+                decoration: const InputDecoration(
+                  labelText: 'Mức Aim (Mục tiêu)',
+                  suffixText: 'điểm',
+                ),
                 validator: (val) {
-                   if (val == null || val.isEmpty) return 'Vui lòng nhập Mức Aim';
-                   final score = int.tryParse(val);
-                   if (score == null || score < 0 || score > 990) return 'Aim không hợp lệ (0-990)';
-                   return null;
+                  if (val == null || val.isEmpty)
+                    return 'Vui lòng nhập Mức Aim';
+                  final score = int.tryParse(val);
+                  if (score == null || score < 0 || score > 990)
+                    return 'Aim không hợp lệ (0-990)';
+                  return null;
                 },
                 onSaved: (val) => _targetScore = int.parse(val!),
               ),
               const SizedBox(height: 16),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text('Ngày sinh: ${DateFormat('dd/MM/yyyy').format(_dob)}'),
+                title: Text(
+                  'Ngày sinh: ${DateFormat('dd/MM/yyyy').format(_dob)}',
+                ),
                 trailing: const Icon(Icons.calendar_today),
                 onTap: () async {
                   final picked = await showDatePicker(
@@ -218,8 +302,14 @@ class _AddUserDialogState extends State<AddUserDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
-        ElevatedButton(onPressed: _save, child: const Text('Lưu & Tạo')),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Hủy'),
+        ),
+        ElevatedButton(
+          onPressed: _isUploading ? null : _save,
+          child: const Text('Lưu & Tạo'),
+        ),
       ],
     );
   }

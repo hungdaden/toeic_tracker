@@ -43,7 +43,8 @@ dependencies:
   confetti: ^0.8.0
   firebase_core: ^4.6.0
   cloud_firestore: ^6.2.0
-
+  firebase_storage: 13.2.0
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter
