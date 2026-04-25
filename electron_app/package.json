@@ -1,0 +1,35 @@
+{
+  "name": "toeic-tracker-desktop",
+  "version": "1.0.0",
+  "description": "TOEIC Tracker Desktop Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder build --win"
+  },
+  "author": "Hung Den",
+  "license": "ISC",
+  "build": {
+    "appId": "com.hungden.toeictracker",
+    "productName": "TOEIC Tracker",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "files": [
+      "main.js",
+      "package.json",
+      "node_modules/**/*",
+      "web_build/**/*"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^41.1.1",
+    "electron-builder": "^26.8.1"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

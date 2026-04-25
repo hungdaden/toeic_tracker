@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../models/toeic_score.dart';
+import '../models/mun_ai_chat.dart';
 
 class UserProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -146,5 +147,41 @@ class UserProvider with ChangeNotifier {
   ToeicScore? get latestScore {
       if (_currentUser == null || _currentUser!.scores.isEmpty) return null;
       return _currentUser!.scores.reduce((a, b) => a.date.isAfter(b.date) ? a : b);
+  }
+
+  // Chat History Management
+  Future<void> saveChatSession(MunAIChatSession session) async {
+    if (_currentUser == null) return;
+
+    final updatedHistory = List<MunAIChatSession>.from(_currentUser!.chatHistory);
+    final index = updatedHistory.indexWhere((s) => s.id == session.id);
+
+    if (index != -1) {
+      updatedHistory[index] = session; // Update existing
+    } else {
+      updatedHistory.insert(0, session); // Add new at the beginning
+      // Keep only the 3 most recent sessions
+      if (updatedHistory.length > 3) {
+        updatedHistory.removeLast();
+      }
+    }
+
+    // Sort by created date descending just in case
+    updatedHistory.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    await _firestore.collection('users').doc(_currentUser!.id).update({
+      'chatHistory': updatedHistory.map((e) => e.toJson()).toList(),
+    });
+  }
+
+  Future<void> deleteChatSession(String sessionId) async {
+    if (_currentUser == null) return;
+
+    final updatedHistory = List<MunAIChatSession>.from(_currentUser!.chatHistory)
+      ..removeWhere((s) => s.id == sessionId);
+
+    await _firestore.collection('users').doc(_currentUser!.id).update({
+      'chatHistory': updatedHistory.map((e) => e.toJson()).toList(),
+    });
   }
 }

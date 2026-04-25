@@ -25,7 +25,15 @@ class _UserListScreenState extends State<UserListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Chọn Hồ Sơ Học Tập')),
+      appBar: AppBar(
+        title: const Text('Chọn Hồ Sơ Học Tập'),
+        leading: context.watch<UserProvider>().currentUser != null 
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => Navigator.pop(context),
+            )
+          : null,
+      ),
       body: Consumer<UserProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
@@ -75,9 +83,10 @@ class _UserListScreenState extends State<UserListScreen> {
                   trailing: const Icon(Icons.login),
                   onTap: () {
                     provider.setCurrentUser(user);
-                    Navigator.pushReplacement(
+                    Navigator.pushAndRemoveUntil(
                       context,
-                      MaterialPageRoute(builder: (_) => const MainScreen()),
+                      MaterialPageRoute(builder: (_) => const MainScreen(initialIndex: 1)),
+                      (route) => false,
                     );
                   },
                   onLongPress: () {

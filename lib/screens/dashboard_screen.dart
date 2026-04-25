@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -20,6 +21,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   ToeicScore? _viewedScore;
   late ConfettiController _confettiController;
   OverlayEntry? _overlayEntry;
+  late ScrollController _scrollController;
+  bool _isFabVisible = true;
 
   @override
   void initState() {
@@ -27,11 +30,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _confettiController = ConfettiController(
       duration: const Duration(seconds: 8),
     );
+    _scrollController = ScrollController();
+    _scrollController.addListener(() {
+      if (_scrollController.position.userScrollDirection == ScrollDirection.reverse) {
+        if (_isFabVisible) setState(() => _isFabVisible = false);
+      } else if (_scrollController.position.userScrollDirection == ScrollDirection.forward) {
+        if (!_isFabVisible) setState(() => _isFabVisible = true);
+      }
+    });
   }
 
   @override
   void dispose() {
     _confettiController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -139,6 +151,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               else
                 Expanded(
                   child: ListView.builder(
+                    controller: _scrollController,
                     itemCount: currentUser.scores.length,
                     itemBuilder: (context, index) {
                       final score = currentUser.scores[index];
@@ -231,20 +244,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
             ],
           ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddScoreScreen()),
-              );
-              if (result == true && mounted) {
-                _showAimHitOverlay();
-              }
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Nhập điểm'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            foregroundColor: Colors.white,
+          floatingActionButton: AnimatedSlide(
+            offset: _isFabVisible ? Offset.zero : const Offset(0, 2),
+            duration: const Duration(milliseconds: 300),
+            child: AnimatedOpacity(
+              opacity: _isFabVisible ? 1 : 0,
+              duration: const Duration(milliseconds: 300),
+              child: FloatingActionButton.extended(
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AddScoreScreen()),
+                  );
+                  if (result == true && mounted) {
+                    _showAimHitOverlay();
+                  }
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Nhập điểm'),
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Colors.white,
+              ),
+            ),
           ),
         );
       },
@@ -469,9 +490,7 @@ class _AimHitOverlayState extends State<_AimHitOverlay> {
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w900,
-                          color: const Color(
-                            0xFFFF3366,
-                          ), // Màu hồng đỏ tươi tắn
+                          color: const Color(0xFFFF3366),
                           shadows: [
                             Shadow(
                               color: Colors.pinkAccent.withOpacity(0.4),

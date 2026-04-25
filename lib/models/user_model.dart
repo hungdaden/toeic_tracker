@@ -1,4 +1,5 @@
 import 'toeic_score.dart';
+import 'mun_ai_chat.dart';
 
 class UserModel {
   final String id;
@@ -7,6 +8,7 @@ class UserModel {
   final int targetScore;
   final String? avatarUrl;
   final List<ToeicScore> scores;
+  final List<MunAIChatSession> chatHistory;
 
   UserModel({
     required this.id,
@@ -15,7 +17,9 @@ class UserModel {
     this.targetScore = 500,
     this.avatarUrl,
     List<ToeicScore>? scores,
-  }) : scores = scores ?? [];
+    List<MunAIChatSession>? chatHistory,
+  })  : scores = scores ?? [],
+        chatHistory = chatHistory ?? [];
 
   int get currentStreak {
     if (scores.isEmpty) return 0;
@@ -46,6 +50,7 @@ class UserModel {
     'targetScore': targetScore,
     'avatarUrl': avatarUrl,
     'scores': scores.map((x) => x.toJson()).toList(),
+    'chatHistory': chatHistory.map((x) => x.toJson()).toList(),
   };
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
@@ -57,6 +62,11 @@ class UserModel {
     scores:
         (json['scores'] as List<dynamic>?)
             ?.map((x) => ToeicScore.fromJson(x))
+            .toList() ??
+        [],
+    chatHistory:
+        (json['chatHistory'] as List<dynamic>?)
+            ?.map((x) => MunAIChatSession.fromJson(x as Map<String, dynamic>))
             .toList() ??
         [],
   );
