@@ -377,7 +377,7 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
                     child: SpinKitThreeBounce(color: Colors.white, size: 20),
                   ),
                 Padding(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.only(left: 8.0, right: 8.0, top: 8.0, bottom: 32.0), // Nâng khung chat lên cao hơn để không bị Mèo Mun che
                   child: Row(
                     children: [
                       Expanded(
