@@ -3,12 +3,12 @@ import 'mun_ai_chat.dart';
 
 class UserModel {
   final String id;
-  final String name;
-  final DateTime dateOfBirth;
-  final int targetScore;
-  final String? avatarUrl;
-  final List<ToeicScore> scores;
-  final List<MunAIChatSession> chatHistory;
+  String name;
+  DateTime dateOfBirth;
+  int targetScore;
+  String? avatarUrl;
+  List<ToeicScore> scores;
+  List<MunAIChatSession> chatHistory;
 
   UserModel({
     required this.id,

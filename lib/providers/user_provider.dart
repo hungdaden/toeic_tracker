@@ -169,9 +169,17 @@ class UserProvider with ChangeNotifier {
     // Sort by created date descending just in case
     updatedHistory.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-    await _firestore.collection('users').doc(_currentUser!.id).update({
-      'chatHistory': updatedHistory.map((e) => e.toJson()).toList(),
-    });
+    // Cập nhật ngay lập tức vào state nội bộ để UI phản hồi ngay (Optimistic UI)
+    _currentUser!.chatHistory = updatedHistory;
+    notifyListeners();
+
+    try {
+      await _firestore.collection('users').doc(_currentUser!.id).update({
+        'chatHistory': updatedHistory.map((e) => e.toJson()).toList(),
+      });
+    } catch (e) {
+      debugPrint("Lỗi khi lưu lịch sử chat lên Firestore: $e");
+    }
   }
 
   Future<void> deleteChatSession(String sessionId) async {
@@ -180,8 +188,15 @@ class UserProvider with ChangeNotifier {
     final updatedHistory = List<MunAIChatSession>.from(_currentUser!.chatHistory)
       ..removeWhere((s) => s.id == sessionId);
 
-    await _firestore.collection('users').doc(_currentUser!.id).update({
-      'chatHistory': updatedHistory.map((e) => e.toJson()).toList(),
-    });
+    _currentUser!.chatHistory = updatedHistory;
+    notifyListeners();
+
+    try {
+      await _firestore.collection('users').doc(_currentUser!.id).update({
+        'chatHistory': updatedHistory.map((e) => e.toJson()).toList(),
+      });
+    } catch (e) {
+      debugPrint("Lỗi khi xóa lịch sử chat khỏi Firestore: $e");
+    }
   }
 }
