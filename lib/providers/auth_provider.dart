@@ -42,7 +42,7 @@ class AuthProvider extends ChangeNotifier {
     } on FirebaseAuthException catch (e) {
       return e.message ?? "Đăng nhập thất bại.";
     } catch (e) {
-      return "Đã xảy ra lỗi không xác định.";
+      return "Đã xảy ra lỗi không xác định: $e";
     } finally {
       _setLoading(false);
     }
@@ -59,7 +59,7 @@ class AuthProvider extends ChangeNotifier {
     } on FirebaseAuthException catch (e) {
       return e.message ?? "Đăng ký thất bại.";
     } catch (e) {
-      return "Đã xảy ra lỗi không xác định.";
+      return "Đã xảy ra lỗi không xác định: $e";
     } finally {
       _setLoading(false);
     }
@@ -94,7 +94,7 @@ class AuthProvider extends ChangeNotifier {
     } on FirebaseAuthException catch (e) {
       return e.message ?? "Lỗi đăng nhập Google từ Firebase.";
     } catch (e) {
-      return "Lỗi cấu hình Google Sign-In hoặc chưa cài đặt.";
+      return "Lỗi cấu hình Google Sign-In hoặc chưa cài đặt. Chi tiết: $e";
     } finally {
       _setLoading(false);
     }

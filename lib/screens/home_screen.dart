@@ -24,7 +24,11 @@ class HomeScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.school_rounded, size: 100, color: Theme.of(context).colorScheme.primary),
+                Icon(
+                  Icons.school_rounded,
+                  size: 100,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(height: 24),
                 const Text(
                   'Chào mừng bạn đến với TOEIC Tracker!',
@@ -40,12 +44,18 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 40),
                 ElevatedButton.icon(
                   onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    );
                   },
                   icon: const Icon(Icons.login),
                   label: const Text('Đăng nhập ngay'),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 16,
+                    ),
                     textStyle: const TextStyle(fontSize: 18),
                   ),
                 ),
@@ -63,7 +73,12 @@ class HomeScreen extends StatelessWidget {
           final users = provider.users;
 
           if (users.isEmpty) {
-            return const Center(child: Text('Chưa có hồ sơ nào. Hãy tạo một hồ sơ mới ở mục "Hồ sơ".'));
+            return const Center(
+              child: Text(
+                'Chưa có hồ sơ nào. Hãy tạo một hồ sơ mới ở mục "Hồ sơ".',
+                style: TextStyle(color: Colors.grey),
+              ),
+            );
           }
 
           return ListView.builder(

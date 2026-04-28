@@ -39,7 +39,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody:
-          false, // Quan trọng: Tắt tràn viền để không che lấp dữ liệu bên dưới
+          false,
       body: _pages[_currentIndex < 4 ? _currentIndex : 0],
       bottomNavigationBar: CurvedNavigationBar(
         index: _currentIndex,
