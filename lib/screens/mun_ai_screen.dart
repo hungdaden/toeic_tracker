@@ -19,7 +19,7 @@ class _MunAIScreenState extends State<MunAIScreen> {
   bool _isLoading = false;
   late GenerativeModel _model;
   final ScrollController _scrollController = ScrollController();
-  
+
   MunAIChatSession? _currentSession;
   bool _isSidebarOpen = false;
 
@@ -46,12 +46,15 @@ class _MunAIScreenState extends State<MunAIScreen> {
 
   void _createNewSession() {
     setState(() {
-      _currentSession = MunAIChatSession(messages: [
-        MunAIChatMessage(
+      _currentSession = MunAIChatSession(
+        messages: [
+          MunAIChatMessage(
             role: 'model',
             text:
-                'Chào bạn! Mình là Mun AI. Mình có thể giúp bạn phân tích điểm số và đưa ra lời khuyên học tập TOEIC. Bạn muốn hỏi gì về kết quả của mình không?')
-      ]);
+                'Chào bạn! Mình là Mun AI. Mình có thể giúp bạn phân tích điểm số và đưa ra lời khuyên học tập TOEIC. Bạn muốn hỏi gì về kết quả của mình không?',
+          ),
+        ],
+      );
     });
   }
 
@@ -98,11 +101,14 @@ class _MunAIScreenState extends State<MunAIScreen> {
 
     if (_apiKey == 'YOUR_GEMINI_API_KEY' || _apiKey.isEmpty) {
       setState(() {
-        _currentSession!.messages.add(MunAIChatMessage(role: 'user', text: text));
+        _currentSession!.messages.add(
+          MunAIChatMessage(role: 'user', text: text),
+        );
         _currentSession!.messages.add(
           MunAIChatMessage(
             role: 'model',
-            text: 'Vui lòng cấu hình Gemini API Key trong thư mục assets/.env để bắt đầu chat nhé!',
+            text:
+                'Vui lòng cấu hình Gemini API Key trong thư mục assets/.env để bắt đầu chat nhé!',
           ),
         );
       });
@@ -111,8 +117,9 @@ class _MunAIScreenState extends State<MunAIScreen> {
       return;
     }
 
-    bool isFirstUserMessage =
-        _currentSession!.messages.where((m) => m.role == 'user').isEmpty;
+    bool isFirstUserMessage = _currentSession!.messages
+        .where((m) => m.role == 'user')
+        .isEmpty;
 
     setState(() {
       _currentSession!.messages.add(MunAIChatMessage(role: 'user', text: text));
@@ -140,20 +147,22 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
           contextPromt += "2. Mục tiêu điểm số: ${currentUser.targetScore}\n";
           if (currentUser.scores.isNotEmpty) {
             contextPromt += "3. Lịch sử bài thi gần nhất:\n";
-            for (var s in currentUser.scores.take(5)) {
+            for (var s in currentUser.scores.take(10)) {
               contextPromt +=
                   "   - Ngày ${DateFormat('dd/MM/yyyy').format(s.date)}: Listening: ${s.listeningScore}, Reading: ${s.readingScore}, Tổng: ${s.totalScore}\n";
             }
             contextPromt += "\nNHIỆM VỤ CỦA BẠN:";
             contextPromt +=
-                "\n- Phân tích sự tiến bộ hoặc sa sút dựa trên lịch sử điểm số.";
+                "\n- Thông báo rằng, bạn được cấp quyền để được truy cập kết quả của 10 bài thi gần nhất.";
+            contextPromt += "\n- Hỏi lại người dùng những yêu cầu sau đây: ";
             contextPromt +=
-                "\n- Dựa vào mục tiêu để đưa ra lộ trình cụ thể.";
+                "\n- 1. Phân tích sự tiến bộ hoặc sa sút dựa trên lịch sử điểm số.";
             contextPromt +=
-                "\n- TUYỆT ĐỐI KHÔNG được trả lời rằng bạn không có quyền truy cập dữ liệu.";
+                "\n- 2. Dựa vào mục tiêu để đưa ra lộ trình cụ thể.";
+            contextPromt +=
+                "\n- 3. TUYỆT ĐỐI KHÔNG được trả lời rằng bạn không có quyền truy cập dữ liệu.";
           } else {
-            contextPromt +=
-                "3. Người dùng này chưa có dữ liệu điểm số nào.\n";
+            contextPromt += "4. Người dùng này chưa có dữ liệu điểm số nào.\n";
           }
         }
         contextPromt += "\nCâu hỏi của người dùng: $text";
@@ -171,9 +180,12 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
       final response = await chat.sendMessage(Content.text(contextPromt));
 
       setState(() {
-        _currentSession!.messages.add(MunAIChatMessage(
+        _currentSession!.messages.add(
+          MunAIChatMessage(
             role: 'model',
-            text: response.text ?? 'Xin lỗi, mình không nhận được phản hồi.'));
+            text: response.text ?? 'Xin lỗi, mình không nhận được phản hồi.',
+          ),
+        );
         _isLoading = false;
       });
 
@@ -187,8 +199,12 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
     } catch (e) {
       debugPrint('Mun AI Error Details: $e');
       setState(() {
-        _currentSession!.messages.add(MunAIChatMessage(
-            role: 'model', text: 'Đã có lỗi xảy ra từ máy chủ Gemini: $e'));
+        _currentSession!.messages.add(
+          MunAIChatMessage(
+            role: 'model',
+            text: 'Đã có lỗi xảy ra từ máy chủ Gemini: $e',
+          ),
+        );
         _isLoading = false;
       });
     }
@@ -200,7 +216,9 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Xóa cuộc trò chuyện?'),
-        content: const Text('Bạn có chắc chắn muốn xóa đoạn chat này không? Dữ liệu không thể khôi phục.'),
+        content: const Text(
+          'Bạn có chắc chắn muốn xóa đoạn chat này không? Dữ liệu không thể khôi phục.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -210,12 +228,14 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
             onPressed: () {
               Navigator.pop(ctx);
               context.read<UserProvider>().deleteChatSession(sessionId);
-              
+
               if (_currentSession?.id == sessionId) {
                 final userProvider = context.read<UserProvider>();
                 final history = userProvider.currentUser?.chatHistory ?? [];
-                final remaining = history.where((s) => s.id != sessionId).toList();
-                
+                final remaining = history
+                    .where((s) => s.id != sessionId)
+                    .toList();
+
                 if (remaining.isNotEmpty) {
                   _loadSession(remaining.first);
                 } else {
@@ -260,16 +280,19 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
               final isSelected = session.id == _currentSession?.id;
               return ListTile(
                 selected: isSelected,
-                selectedTileColor:
-                    Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                selectedTileColor: Theme.of(
+                  context,
+                ).colorScheme.primary.withOpacity(0.1),
                 leading: const Icon(Icons.chat_bubble_outline),
                 title: Text(
                   session.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal),
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
                 ),
                 subtitle: Text(
                   DateFormat('dd/MM HH:mm').format(session.createdAt),
@@ -316,7 +339,9 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
             child: ClipRect(
               child: Container(
                 width: 250,
-                color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
+                color: Theme.of(
+                  context,
+                ).colorScheme.surfaceVariant.withOpacity(0.2),
                 child: _buildSidebarContent(),
               ),
             ),
@@ -334,8 +359,9 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
                       final msg = _currentSession!.messages[index];
                       final isUser = msg.role == 'user';
                       return Align(
-                        alignment:
-                            isUser ? Alignment.centerRight : Alignment.centerLeft,
+                        alignment: isUser
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
                         child: Container(
                           margin: const EdgeInsets.symmetric(vertical: 4),
                           padding: const EdgeInsets.symmetric(
@@ -347,10 +373,12 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
                                 ? Theme.of(context).colorScheme.primary
                                 : Theme.of(context).colorScheme.surfaceVariant,
                             borderRadius: BorderRadius.circular(20).copyWith(
-                              bottomRight:
-                                  isUser ? const Radius.circular(0) : null,
-                              bottomLeft:
-                                  !isUser ? const Radius.circular(0) : null,
+                              bottomRight: isUser
+                                  ? const Radius.circular(0)
+                                  : null,
+                              bottomLeft: !isUser
+                                  ? const Radius.circular(0)
+                                  : null,
                             ),
                           ),
                           constraints: BoxConstraints(
@@ -361,9 +389,9 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
                             style: TextStyle(
                               color: isUser
                                   ? Theme.of(context).colorScheme.onPrimary
-                                  : Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -377,7 +405,12 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
                     child: SpinKitThreeBounce(color: Colors.white, size: 20),
                   ),
                 Padding(
-                  padding: const EdgeInsets.only(left: 8.0, right: 8.0, top: 8.0, bottom: 32.0), // Nâng khung chat lên cao hơn để không bị Mèo Mun che
+                  padding: const EdgeInsets.only(
+                    left: 8.0,
+                    right: 8.0,
+                    top: 8.0,
+                    bottom: 32.0,
+                  ), // Nâng khung chat lên cao hơn để không bị Mèo Mun che
                   child: Row(
                     children: [
                       Expanded(
