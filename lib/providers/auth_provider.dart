@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show Platform;
 
 class AuthProvider extends ChangeNotifier {
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId:
-        '865926846836-rlcbc7mjgj2cikvmitprsqs3pm6qi0as.apps.googleusercontent.com', // Thêm dòng này
+    clientId: kIsWeb
+        ? '865926846836-rlcbc7mjgj2cikvmitprsqs3pm6qi0as.apps.googleusercontent.com'
+        : (Platform.isIOS
+              ? '865926846836-ol3m9s3605b02gt5tp3vdha4fainndtm.apps.googleusercontent.com'
+              : null),
   );
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
