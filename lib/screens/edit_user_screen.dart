@@ -88,11 +88,14 @@ class _EditUserDialogState extends State<EditUserDialog> {
       _formKey.currentState!.save();
       final updatedUser = UserModel(
         id: widget.user.id,
+        authUid: widget.user.authUid, // Quan trọng: Giữ lại ID tài khoản
         name: _name,
         targetScore: _targetScore,
         dateOfBirth: _dob,
-        avatarUrl: _avatarUrl, // Lưu link web vào Firestore
+        avatarUrl: _avatarUrl,
         scores: widget.user.scores,
+        chatHistory:
+            widget.user.chatHistory, // Quan trọng: Giữ lại lịch sử chat
       );
       context.read<UserProvider>().updateUser(updatedUser);
       Navigator.pop(context);
