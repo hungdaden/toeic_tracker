@@ -3,14 +3,59 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/user_provider.dart';
+import '../providers/auth_provider.dart';
 import '../models/user_model.dart';
 import '../models/toeic_score.dart';
+import 'login_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+
+    if (!authProvider.isAuthenticated) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('TOEIC Tracker')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.school_rounded, size: 100, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(height: 24),
+                const Text(
+                  'Chào mừng bạn đến với TOEIC Tracker!',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Vui lòng đăng nhập để lưu trữ hồ sơ học tập, đồng bộ dữ liệu và sử dụng trợ lý Mun AI.',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 40),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                  },
+                  icon: const Icon(Icons.login),
+                  label: const Text('Đăng nhập ngay'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    textStyle: const TextStyle(fontSize: 18),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Tổng Quan Học Tập')),
       body: Consumer<UserProvider>(
@@ -18,7 +63,7 @@ class HomeScreen extends StatelessWidget {
           final users = provider.users;
 
           if (users.isEmpty) {
-            return const Center(child: Text('Chưa có hồ sơ nào.'));
+            return const Center(child: Text('Chưa có hồ sơ nào. Hãy tạo một hồ sơ mới ở mục "Hồ sơ".'));
           }
 
           return ListView.builder(

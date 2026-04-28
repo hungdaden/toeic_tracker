@@ -10,6 +10,8 @@ import 'edit_user_screen.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../services/storage_service.dart';
 
+import '../providers/auth_provider.dart';
+
 class UserListScreen extends StatefulWidget {
   const UserListScreen({super.key});
 
@@ -20,6 +22,17 @@ class UserListScreen extends StatefulWidget {
 class _UserListScreenState extends State<UserListScreen> {
   void _openAddUserDialog() {
     showDialog(context: context, builder: (context) => const AddUserDialog());
+  }
+
+  void _signOut() async {
+    await context.read<AuthProvider>().signOut();
+    if (!mounted) return;
+    // Quay về HomeScreen sau khi đăng xuất
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const MainScreen(initialIndex: 0)),
+      (route) => false,
+    );
   }
 
   @override
@@ -33,6 +46,13 @@ class _UserListScreenState extends State<UserListScreen> {
               onPressed: () => Navigator.pop(context),
             )
           : null,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Đăng xuất',
+            onPressed: _signOut,
+          ),
+        ],
       ),
       body: Consumer<UserProvider>(
         builder: (context, provider, child) {

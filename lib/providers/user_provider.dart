@@ -12,16 +12,15 @@ class UserProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   List<UserModel> _users = [];
   UserModel? _currentUser;
-  bool _isLoading = true;
+  bool _isLoading = false; // Bắt đầu bằng false để không block UI nếu chưa đăng nhập
   StreamSubscription<QuerySnapshot>? _usersSubscription;
+  String? _authUid;
 
   List<UserModel> get users => _users;
   UserModel? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
 
-  UserProvider() {
-    _initAndListen();
-  }
+  UserProvider();
 
   @override
   void dispose() {
@@ -29,21 +28,50 @@ class UserProvider with ChangeNotifier {
     super.dispose();
   }
 
+  void updateAuthUid(String? authUid) {
+    if (_authUid == authUid) return;
+    _authUid = authUid;
+    
+    _usersSubscription?.cancel();
+    _users.clear();
+    _currentUser = null;
+    
+    if (_authUid != null) {
+      _isLoading = true;
+      notifyListeners();
+      _initAndListen();
+    } else {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   void _initAndListen() {
-    _usersSubscription = _firestore.collection('users').snapshots().listen((snapshot) async {
+    if (_authUid == null) return;
+    
+    _usersSubscription = _firestore
+        .collection('users')
+        .where('authUid', isEqualTo: _authUid)
+        .snapshots()
+        .listen((snapshot) async {
       if (snapshot.docs.isEmpty) {
-        // First time, database is empty. Let's do data migration.
-        await _migrateDataToFirestore();
+        // Nếu user mới chưa có profile nào, danh sách rỗng
+        _users = [];
+        _currentUser = null;
+        _isLoading = false;
+        notifyListeners();
       } else {
         _users = snapshot.docs.map((doc) => UserModel.fromJson(doc.data() as Map<String, dynamic>)).toList();
         
-        // Update _currentUser object from _users list if it exists
         if (_currentUser != null) {
            try {
              _currentUser = _users.firstWhere((u) => u.id == _currentUser!.id);
            } catch (e) {
              _currentUser = null;
            }
+        } else if (_users.isNotEmpty) {
+           // Tự động chọn profile đầu tiên nếu có
+           _currentUser = _users.first;
         }
         
         _isLoading = false;
@@ -95,6 +123,7 @@ class UserProvider with ChangeNotifier {
   }
 
   Future<void> addUser(UserModel user) async {
+    user.authUid = _authUid; // Gắn hồ sơ này với tài khoản đang đăng nhập
     await _firestore.collection('users').doc(user.id).set(user.toJson());
   }
 

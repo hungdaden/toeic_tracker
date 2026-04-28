@@ -3,6 +3,7 @@ import 'mun_ai_chat.dart';
 
 class UserModel {
   final String id;
+  String? authUid; // ID của tài khoản đăng nhập (Firebase Auth UID)
   String name;
   DateTime dateOfBirth;
   int targetScore;
@@ -12,6 +13,7 @@ class UserModel {
 
   UserModel({
     required this.id,
+    this.authUid,
     required this.name,
     required this.dateOfBirth,
     this.targetScore = 500,
@@ -45,6 +47,7 @@ class UserModel {
 
   Map<String, dynamic> toJson() => {
     'id': id,
+    'authUid': authUid,
     'name': name,
     'dateOfBirth': dateOfBirth.toIso8601String(),
     'targetScore': targetScore,
@@ -55,6 +58,7 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
     id: json['id'],
+    authUid: json['authUid'],
     name: json['name'],
     dateOfBirth: DateTime.parse(json['dateOfBirth']),
     targetScore: json['targetScore'] ?? 500,

@@ -48,7 +48,18 @@
 	<key>NSPhotoLibraryUsageDescription</key>
     <string>Ứng dụng cần quyền truy cập thư viện ảnh để bạn có thể tải lên ảnh đại diện của mình.</string>
 
-    <key>NSCameraUsageDescription</key>
-    <string>Ứng dụng cần quyền sử dụng Camera để chụp ảnh đại diện.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Ứng dụng cần quyền sử dụng Camera để chụp ảnh đại diện.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.865926846836-ol3m9s3605b02gt5tp3vdha4fainndtm</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

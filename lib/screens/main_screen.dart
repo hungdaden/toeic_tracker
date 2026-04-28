@@ -7,7 +7,9 @@ import 'leaderboard_screen.dart';
 import 'user_list_screen.dart';
 import 'home_screen.dart';
 import 'mun_ai_screen.dart';
+import 'login_screen.dart';
 import '../providers/user_provider.dart';
+import '../providers/auth_provider.dart';
 
 class MainScreen extends StatefulWidget {
   final int initialIndex;
@@ -63,11 +65,18 @@ class _MainScreenState extends State<MainScreen> {
         },
         letIndexChange: (index) {
           if (index == 4) {
-            // Mở màn hình Hồ sơ mà không làm thanh cong chạy tới đó
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const UserListScreen()),
-            );
+            final authProvider = context.read<AuthProvider>();
+            if (authProvider.isAuthenticated) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const UserListScreen()),
+              );
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              );
+            }
             return false;
           }
           return true;
