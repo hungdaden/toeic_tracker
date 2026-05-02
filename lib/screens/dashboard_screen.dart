@@ -214,7 +214,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   context,
                                 ).colorScheme.primary.withAlpha(51),
                                 child: Text(
-                                  '${score.totalScore}',
+                                  '${score.calculateTotal(currentUser.isFourSkills)}',
                                   style: TextStyle(
                                     color: Theme.of(
                                       context,
@@ -317,7 +317,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                '${displayedScore.totalScore}',
+                '${displayedScore.calculateTotal(isFourSkills)}',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 48,

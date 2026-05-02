@@ -253,7 +253,7 @@ class _UserCardState extends State<_UserCard> {
                               ],
                               _buildScoreCard(
                                 'Tổng',
-                                score.totalScore,
+                                score.calculateTotal(user.isFourSkills),
                                 Colors.green,
                               ),
                             ],

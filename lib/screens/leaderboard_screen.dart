@@ -22,8 +22,8 @@ class LeaderboardScreen extends StatelessWidget {
     }
 
     rankings.sort(
-      (a, b) => (b['score'].totalScore as int).compareTo(
-        (a['score'].totalScore as int),
+      (a, b) => (b['score'].calculateTotal((b['user'] as UserModel).isFourSkills) as int).compareTo(
+        (a['score'].calculateTotal((a['user'] as UserModel).isFourSkills) as int),
       ),
     );
 
@@ -43,7 +43,7 @@ class LeaderboardScreen extends StatelessWidget {
                 final userMap = rankings[index];
                 final UserModel user = userMap['user'];
                 final scoreObj = userMap['score'];
-                final int score = scoreObj.totalScore;
+                final int score = scoreObj.calculateTotal(user.isFourSkills);
                 final DateTime date = scoreObj.date;
 
                 // Colors for top 3

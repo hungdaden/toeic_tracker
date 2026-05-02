@@ -21,7 +21,7 @@ class LearningPathScreen extends StatelessWidget {
       );
     }
 
-    final total = scoreToUse.totalScore;
+    final total = scoreToUse.calculateTotal(provider.currentUser?.isFourSkills ?? false);
     String level;
     String description;
     List<String> advice;

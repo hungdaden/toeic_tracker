@@ -15,7 +15,12 @@ class ToeicScore {
     this.writingScore,
   });
 
-  int get totalScore => listeningScore + readingScore + (speakingScore ?? 0) + (writingScore ?? 0);
+  int calculateTotal(bool isFourSkills) {
+    if (isFourSkills) {
+      return listeningScore + readingScore + (speakingScore ?? 0) + (writingScore ?? 0);
+    }
+    return listeningScore + readingScore;
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,

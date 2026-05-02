@@ -149,7 +149,7 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
             contextPromt += "3. Lịch sử bài thi gần nhất:\n";
             for (var s in currentUser.scores.take(10)) {
               contextPromt +=
-                  "   - Ngày ${DateFormat('dd/MM/yyyy').format(s.date)}: Listening: ${s.listeningScore}, Reading: ${s.readingScore}, Tổng: ${s.totalScore}\n";
+                  "   - Ngày ${DateFormat('dd/MM/yyyy').format(s.date)}: Listening: ${s.listeningScore}, Reading: ${s.readingScore}, Tổng: ${s.calculateTotal(currentUser.isFourSkills)}\n";
             }
             contextPromt += "\nNHIỆM VỤ CỦA BẠN:";
             contextPromt +=

@@ -50,7 +50,7 @@ class _AddScoreScreenState extends State<AddScoreScreen> {
       }
       
       final targetScore = userProvider.currentUser?.targetScore ?? 500;
-      final isHitAim = newScore.totalScore >= targetScore;
+      final isHitAim = newScore.calculateTotal(userProvider.currentUser?.isFourSkills ?? false) >= targetScore;
       
       Navigator.pop(context, isHitAim);
     }
