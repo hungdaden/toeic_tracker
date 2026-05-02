@@ -42,19 +42,15 @@ flutter run
 ```
 
 ### 4. Desktop Packaging (Electron)
-If you wish to wrap the web build into a desktop application:
-```bash
-# Build the web version
-flutter build web --release
+The project includes an automated PowerShell script to easily build and package the desktop application (.exe) for Windows.
 
-# Copy build to electron directory
-xcopy /E /I /Y build\web electron_app\web_build
-
-# Build the installer
-cd electron_app
-npm install
-npm run build
-```
+1. Ensure you are in the root directory (`toeic_tracker`).
+2. Run the build script in PowerShell:
+   ```powershell
+   .\build_desktop.ps1
+   ```
+3. The script will automatically clean old builds, compile the Flutter Web app, transfer the necessary files, and package the application using Electron Builder.
+4. Once completed successfully, you can find your `toeic-tracker-desktop Setup.exe` installer inside the `electron_app\release` directory.
 
 ---
 
