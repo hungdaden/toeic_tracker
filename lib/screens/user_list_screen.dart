@@ -9,6 +9,7 @@ import 'main_screen.dart';
 import 'edit_user_screen.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../services/storage_service.dart';
+import '../widgets/skills_toggle.dart';
 
 import '../providers/auth_provider.dart';
 
@@ -40,12 +41,7 @@ class _UserListScreenState extends State<UserListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chọn Hồ Sơ Học Tập'),
-        leading: context.watch<UserProvider>().currentUser != null 
-          ? IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.pop(context),
-            )
-          : null,
+        // Xóa nút back (leading) vì giờ màn hình này là 1 tab trong thanh điều hướng
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -200,6 +196,7 @@ class _AddUserDialogState extends State<AddUserDialog> {
   String _name = '';
   int _targetScore = 500;
   DateTime _dob = DateTime.now();
+  bool _isFourSkills = false;
 
   String? _avatarUrl; // Đổi thành avatarUrl
   bool _isUploading = false; // Thêm trạng thái loading
@@ -249,6 +246,7 @@ class _AddUserDialogState extends State<AddUserDialog> {
         targetScore: _targetScore,
         dateOfBirth: _dob,
         avatarUrl: _avatarUrl, // Lưu link web
+        isFourSkills: _isFourSkills,
       );
       context.read<UserProvider>().addUser(user);
       Navigator.pop(context);
@@ -257,6 +255,8 @@ class _AddUserDialogState extends State<AddUserDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final int maxScore = _isFourSkills ? 1390 : 990;
+    
     return AlertDialog(
       title: const Text('Tạo Hồ Sơ Mới'),
       content: SingleChildScrollView(
@@ -292,19 +292,30 @@ class _AddUserDialogState extends State<AddUserDialog> {
                 onSaved: (val) => _name = val!,
               ),
               const SizedBox(height: 16),
+              SkillsToggle(
+                isFourSkills: _isFourSkills,
+                onChanged: (bool value) {
+                  setState(() {
+                    _isFourSkills = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
               TextFormField(
+                key: ValueKey('aim_$_isFourSkills'),
                 initialValue: _targetScore.toString(),
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Mức Aim (Mục tiêu)',
                   suffixText: 'điểm',
+                  helperText: 'Tối đa $maxScore điểm',
                 ),
                 validator: (val) {
                   if (val == null || val.isEmpty)
                     return 'Vui lòng nhập Mức Aim';
                   final score = int.tryParse(val);
-                  if (score == null || score < 0 || score > 990)
-                    return 'Aim không hợp lệ (0-990)';
+                  if (score == null || score < 0 || score > maxScore)
+                    return 'Aim không hợp lệ (0-$maxScore)';
                   return null;
                 },
                 onSaved: (val) => _targetScore = int.parse(val!),

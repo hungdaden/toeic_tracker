@@ -130,7 +130,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (displayScore != null)
-                _buildLatestScoreCard(context, displayScore),
+                _buildLatestScoreCard(context, displayScore, currentUser.isFourSkills),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 child: Text(
@@ -228,7 +228,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 DateFormat('dd/MM/yyyy').format(score.date),
                               ),
                               subtitle: Text(
-                                'Listening: ${score.listeningScore} | Reading: ${score.readingScore}',
+                                currentUser.isFourSkills 
+                                    ? 'L: ${score.listeningScore} | R: ${score.readingScore} | S: ${score.speakingScore ?? 0} | W: ${score.writingScore ?? 0}'
+                                    : 'Listening: ${score.listeningScore} | Reading: ${score.readingScore}',
                               ),
                               trailing: const Icon(
                                 Icons.arrow_forward_ios,
@@ -275,6 +277,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildLatestScoreCard(
     BuildContext context,
     ToeicScore displayedScore,
+    bool isFourSkills,
   ) {
     bool isViewingPast = _viewedScore != null;
     return Container(
@@ -352,6 +355,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ],
                   ),
+                  if (isFourSkills) ...[
+                    Container(width: 1, height: 40, color: Colors.white30),
+                    Column(
+                      children: [
+                        const Icon(Icons.mic, color: Colors.white),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${displayedScore.speakingScore ?? 0}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(width: 1, height: 40, color: Colors.white30),
+                    Column(
+                      children: [
+                        const Icon(Icons.edit_document, color: Colors.white),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${displayedScore.writingScore ?? 0}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 20),

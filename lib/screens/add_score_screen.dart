@@ -16,6 +16,8 @@ class _AddScoreScreenState extends State<AddScoreScreen> {
   final _formKey = GlobalKey<FormState>();
   late int _listeningScore;
   late int _readingScore;
+  int? _speakingScore;
+  int? _writingScore;
   late DateTime _selectedDate;
 
   @override
@@ -23,6 +25,8 @@ class _AddScoreScreenState extends State<AddScoreScreen> {
     super.initState();
     _listeningScore = widget.existingScore?.listeningScore ?? 0;
     _readingScore = widget.existingScore?.readingScore ?? 0;
+    _speakingScore = widget.existingScore?.speakingScore;
+    _writingScore = widget.existingScore?.writingScore;
     _selectedDate = widget.existingScore?.date ?? DateTime.now();
   }
 
@@ -35,6 +39,8 @@ class _AddScoreScreenState extends State<AddScoreScreen> {
         date: _selectedDate,
         listeningScore: _listeningScore,
         readingScore: _readingScore,
+        speakingScore: _speakingScore,
+        writingScore: _writingScore,
       );
       final userProvider = context.read<UserProvider>();
       if (widget.existingScore != null) {
@@ -52,6 +58,9 @@ class _AddScoreScreenState extends State<AddScoreScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final userProvider = context.watch<UserProvider>();
+    final isFourSkills = userProvider.currentUser?.isFourSkills ?? false;
+
     return Scaffold(
       appBar: AppBar(title: Text(widget.existingScore != null ? 'Cập nhật điểm' : 'Thêm điểm TOEIC')),
       body: Padding(
@@ -64,59 +73,97 @@ class _AddScoreScreenState extends State<AddScoreScreen> {
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.date_range, color: Colors.blueAccent),
-                        title: Text('Ngày thi: ${DateFormat('dd/MM/yyyy').format(_selectedDate)}'),
-                        trailing: const Icon(Icons.edit),
-                        onTap: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: _selectedDate,
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime.now(),
-                          );
-                          if (picked != null) {
-                            setState(() => _selectedDate = picked);
-                          }
-                        },
-                      ),
-                      const Divider(),
-                      TextFormField(
-                        initialValue: widget.existingScore != null ? _listeningScore.toString() : null,
-                        decoration: const InputDecoration(
-                          labelText: 'Điểm Nghe (Listening)',
-                          icon: Icon(Icons.headphones, color: Colors.blueAccent),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.date_range, color: Colors.blueAccent),
+                          title: Text('Ngày thi: ${DateFormat('dd/MM/yyyy').format(_selectedDate)}'),
+                          trailing: const Icon(Icons.edit),
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _selectedDate,
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime.now(),
+                            );
+                            if (picked != null) {
+                              setState(() => _selectedDate = picked);
+                            }
+                          },
                         ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) return 'Vui lòng nhập điểm';
-                          final val = int.tryParse(value);
-                          if (val == null || val < 0 || val > 495) return 'Điểm phải từ 0 - 495';
-                          if (val % 5 != 0) return 'Phải là bội số của 5';
-                          return null;
-                        },
-                        onSaved: (val) => _listeningScore = int.parse(val!),
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        initialValue: widget.existingScore != null ? _readingScore.toString() : null,
-                        decoration: const InputDecoration(
-                          labelText: 'Điểm Đọc (Reading)',
-                          icon: Icon(Icons.menu_book, color: Colors.greenAccent),
+                        const Divider(),
+                        TextFormField(
+                          initialValue: widget.existingScore != null ? _listeningScore.toString() : null,
+                          decoration: const InputDecoration(
+                            labelText: 'Điểm Nghe (Listening)',
+                            icon: Icon(Icons.headphones, color: Colors.blueAccent),
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) return 'Vui lòng nhập điểm';
+                            final val = int.tryParse(value);
+                            if (val == null || val < 0 || val > 495) return 'Điểm phải từ 0 - 495';
+                            if (val % 5 != 0) return 'Phải là bội số của 5';
+                            return null;
+                          },
+                          onSaved: (val) => _listeningScore = int.parse(val!),
                         ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) return 'Vui lòng nhập điểm';
-                          final val = int.tryParse(value);
-                          if (val == null || val < 0 || val > 495) return 'Điểm phải từ 0 - 495';
-                          if (val % 5 != 0) return 'Phải là bội số của 5';
-                          return null;
-                        },
-                        onSaved: (val) => _readingScore = int.parse(val!),
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          initialValue: widget.existingScore != null ? _readingScore.toString() : null,
+                          decoration: const InputDecoration(
+                            labelText: 'Điểm Đọc (Reading)',
+                            icon: Icon(Icons.menu_book, color: Colors.greenAccent),
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) return 'Vui lòng nhập điểm';
+                            final val = int.tryParse(value);
+                            if (val == null || val < 0 || val > 495) return 'Điểm phải từ 0 - 495';
+                            if (val % 5 != 0) return 'Phải là bội số của 5';
+                            return null;
+                          },
+                          onSaved: (val) => _readingScore = int.parse(val!),
+                        ),
+                        if (isFourSkills) ...[
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            initialValue: widget.existingScore != null && _speakingScore != null ? _speakingScore.toString() : null,
+                            decoration: const InputDecoration(
+                              labelText: 'Điểm Nói (Speaking)',
+                              icon: Icon(Icons.mic, color: Colors.orangeAccent),
+                            ),
+                            keyboardType: TextInputType.number,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) return 'Vui lòng nhập điểm';
+                              final val = int.tryParse(value);
+                              if (val == null || val < 0 || val > 200) return 'Điểm phải từ 0 - 200';
+                              if (val % 10 != 0) return 'Phải là bội số của 10';
+                              return null;
+                            },
+                            onSaved: (val) => _speakingScore = int.parse(val!),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            initialValue: widget.existingScore != null && _writingScore != null ? _writingScore.toString() : null,
+                            decoration: const InputDecoration(
+                              labelText: 'Điểm Viết (Writing)',
+                              icon: Icon(Icons.edit_document, color: Colors.purpleAccent),
+                            ),
+                            keyboardType: TextInputType.number,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) return 'Vui lòng nhập điểm';
+                              final val = int.tryParse(value);
+                              if (val == null || val < 0 || val > 200) return 'Điểm phải từ 0 - 200';
+                              if (val % 10 != 0) return 'Phải là bội số của 10';
+                              return null;
+                            },
+                            onSaved: (val) => _writingScore = int.parse(val!),
+                          ),
+                        ]
+                      ],
+                    ),
                   ),
                 ),
               ),

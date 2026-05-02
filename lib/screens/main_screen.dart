@@ -27,6 +27,7 @@ class _MainScreenState extends State<MainScreen> {
     const DashboardScreen(),
     const MunAIScreen(),
     const LeaderboardScreen(),
+    const UserListScreen(),
   ];
 
   @override
@@ -40,7 +41,7 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       extendBody:
           false,
-      body: _pages[_currentIndex < 4 ? _currentIndex : 0],
+      body: _pages[_currentIndex],
       bottomNavigationBar: CurvedNavigationBar(
         index: _currentIndex,
         height: 60.0,
@@ -66,18 +67,13 @@ class _MainScreenState extends State<MainScreen> {
         letIndexChange: (index) {
           if (index == 4) {
             final authProvider = context.read<AuthProvider>();
-            if (authProvider.isAuthenticated) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const UserListScreen()),
-              );
-            } else {
+            if (!authProvider.isAuthenticated) {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
               );
+              return false;
             }
-            return false;
           }
           return true;
         },

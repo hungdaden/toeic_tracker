@@ -8,6 +8,7 @@ class UserModel {
   DateTime dateOfBirth;
   int targetScore;
   String? avatarUrl;
+  bool isFourSkills; // Thêm thuộc tính này
   List<ToeicScore> scores;
   List<MunAIChatSession> chatHistory;
 
@@ -18,6 +19,7 @@ class UserModel {
     required this.dateOfBirth,
     this.targetScore = 500,
     this.avatarUrl,
+    this.isFourSkills = false, // Mặc định là false (2 kỹ năng)
     List<ToeicScore>? scores,
     List<MunAIChatSession>? chatHistory,
   })  : scores = scores ?? [],
@@ -52,6 +54,7 @@ class UserModel {
     'dateOfBirth': dateOfBirth.toIso8601String(),
     'targetScore': targetScore,
     'avatarUrl': avatarUrl,
+    'isFourSkills': isFourSkills,
     'scores': scores.map((x) => x.toJson()).toList(),
     'chatHistory': chatHistory.map((x) => x.toJson()).toList(),
   };
@@ -63,6 +66,7 @@ class UserModel {
     dateOfBirth: DateTime.parse(json['dateOfBirth']),
     targetScore: json['targetScore'] ?? 500,
     avatarUrl: json['avatarUrl'],
+    isFourSkills: json['isFourSkills'] ?? false,
     scores:
         (json['scores'] as List<dynamic>?)
             ?.map((x) => ToeicScore.fromJson(x))

@@ -222,9 +222,13 @@ class _UserCardState extends State<_UserCard> {
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: Wrap(
+                              alignment: WrapAlignment.spaceAround,
+                              spacing: 8,
+                              runSpacing: 12,
+                              children: [
                               _buildScoreCard(
                                 'Listening',
                                 score.listeningScore,
@@ -235,12 +239,25 @@ class _UserCardState extends State<_UserCard> {
                                 score.readingScore,
                                 Colors.orange,
                               ),
+                              if (user.isFourSkills) ...[
+                                _buildScoreCard(
+                                  'Speaking',
+                                  score.speakingScore ?? 0,
+                                  Colors.purple,
+                                ),
+                                _buildScoreCard(
+                                  'Writing',
+                                  score.writingScore ?? 0,
+                                  Colors.redAccent,
+                                ),
+                              ],
                               _buildScoreCard(
-                                'Tổng điểm',
+                                'Tổng',
                                 score.totalScore,
                                 Colors.green,
                               ),
                             ],
+                          ),
                           ),
                         ],
                       ),

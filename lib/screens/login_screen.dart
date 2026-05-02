@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
@@ -13,16 +14,69 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _isLogin = true;
+  Timer? _debounce;
+  bool _passwordsMatch = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(_onPasswordChanged);
+    _confirmPasswordController.addListener(_onPasswordChanged);
+  }
+
+  void _onPasswordChanged() {
+    if (!_isLogin) {
+      // Ẩn lỗi ngay khi người dùng đang gõ
+      if (!_passwordsMatch) {
+        setState(() {
+          _passwordsMatch = true;
+        });
+      }
+
+      // Hủy timer cũ nếu có
+      if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+      // Đặt timer mới (delay 800ms)
+      _debounce = Timer(const Duration(milliseconds: 800), () {
+        if (mounted) {
+          setState(() {
+            _passwordsMatch = _confirmPasswordController.text.isEmpty ||
+                _passwordController.text == _confirmPasswordController.text;
+          });
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _passwordController.removeListener(_onPasswordChanged);
+    _confirmPasswordController.removeListener(_onPasswordChanged);
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   void _submit() async {
     final authProvider = context.read<AuthProvider>();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
 
-    if (email.isEmpty || password.isEmpty) {
+    if (email.isEmpty || password.isEmpty || (!_isLogin && confirmPassword.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Vui lòng nhập đầy đủ thông tin.')),
+      );
+      return;
+    }
+
+    if (!_isLogin && password != confirmPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Mật khẩu nhập lại không khớp.')),
       );
       return;
     }
@@ -94,9 +148,23 @@ class _LoginScreenState extends State<LoginScreen> {
                       labelText: 'Mật khẩu',
                       prefixIcon: const Icon(Icons.lock),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      errorText: !_passwordsMatch ? 'Mật khẩu không khớp' : null,
                     ),
                     obscureText: true,
                   ),
+                  if (!_isLogin) ...[
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _confirmPasswordController,
+                      decoration: InputDecoration(
+                        labelText: 'Nhập lại mật khẩu',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        errorText: !_passwordsMatch ? 'Mật khẩu không khớp' : null,
+                      ),
+                      obscureText: true,
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: _submit,
@@ -108,7 +176,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
                   TextButton(
-                    onPressed: () => setState(() => _isLogin = !_isLogin),
+                    onPressed: () {
+                      setState(() {
+                        _isLogin = !_isLogin;
+                        _confirmPasswordController.clear();
+                      });
+                    },
                     child: Text(_isLogin ? 'Chưa có tài khoản? Đăng ký ngay' : 'Đã có tài khoản? Đăng nhập'),
                   ),
                   const SizedBox(height: 24),
