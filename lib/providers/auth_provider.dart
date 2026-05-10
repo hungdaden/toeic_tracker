@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
@@ -37,7 +38,23 @@ class AuthProvider extends ChangeNotifier {
   Future<String?> signInWithEmail(String email, String password) async {
     _setLoading(true);
     try {
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      UserCredential result = await _auth.signInWithEmailAndPassword(email: email, password: password);
+      
+      if (result.user != null) {
+        // KIỂM TRA TÀI KHOẢN CÓ BỊ KHÓA KHÔNG
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .where('authUid', isEqualTo: result.user!.uid)
+            .get();
+
+        if (userDoc.docs.isNotEmpty) {
+          final userData = userDoc.docs.first.data();
+          if (userData['isDisabled'] == true) {
+            await _auth.signOut();
+            return "Tài khoản của bạn đã bị khóa bởi quản trị viên.";
+          }
+        }
+      }
       return null; // Success
     } on FirebaseAuthException catch (e) {
       return e.message ?? "Đăng nhập thất bại.";

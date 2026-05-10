@@ -14,6 +14,8 @@ class UserModel {
   String? groupId; // Mã nhóm (5 ký tự)
   String? groupRole; // 'leader', 'co-leader', 'member'
   String? pendingGroupId; // Mã nhóm đang chờ duyệt
+  bool isDisabled; // Trạng thái khóa tài khoản
+  bool isAdmin; // Trạng thái Admin
 
   UserModel({
     required this.id,
@@ -26,6 +28,8 @@ class UserModel {
     this.groupId,
     this.groupRole,
     this.pendingGroupId,
+    this.isDisabled = false,
+    this.isAdmin = false,
     List<ToeicScore>? scores,
     List<MunAIChatSession>? chatHistory,
   })  : scores = scores ?? [],
@@ -34,12 +38,20 @@ class UserModel {
   int get currentStreak {
     if (scores.isEmpty) return 0;
 
-    // Dùng utc để tính toán cho chuẩn xác tránh lỗi khác múi giờ / DST
     final uniqueDates = scores
         .map((s) => DateTime.utc(s.date.year, s.date.month, s.date.day))
         .toSet()
         .toList();
     uniqueDates.sort((a, b) => b.compareTo(a));
+
+    final now = DateTime.now();
+    final today = DateTime.utc(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    // Nếu ngày học gần nhất không phải hôm nay hoặc hôm qua -> Mất streak
+    if (uniqueDates[0].isBefore(yesterday)) {
+      return 0;
+    }
 
     int streak = 1;
     for (int i = 0; i < uniqueDates.length - 1; i++) {
@@ -64,6 +76,8 @@ class UserModel {
     'groupId': groupId,
     'groupRole': groupRole,
     'pendingGroupId': pendingGroupId,
+    'isDisabled': isDisabled,
+    'isAdmin': isAdmin,
     'scores': scores.map((x) => x.toJson()).toList(),
     'chatHistory': chatHistory.map((x) => x.toJson()).toList(),
   };
@@ -79,6 +93,8 @@ class UserModel {
     groupId: json['groupId'],
     groupRole: json['groupRole'],
     pendingGroupId: json['pendingGroupId'],
+    isDisabled: json['isDisabled'] ?? false,
+    isAdmin: json['isAdmin'] ?? false,
     scores:
         (json['scores'] as List<dynamic>?)
             ?.map((x) => ToeicScore.fromJson(x))

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
 import '../models/toeic_score.dart';
 import '../models/mun_ai_chat.dart';
@@ -82,6 +83,13 @@ class UserProvider with ChangeNotifier {
         notifyListeners();
       } else {
         _users = snapshot.docs.map((doc) => UserModel.fromJson(doc.data() as Map<String, dynamic>)).toList();
+        
+        // KIỂM TRA TÀI KHOẢN BỊ KHÓA
+        // Nếu bất kỳ hồ sơ nào của User này bị Admin khóa, chúng ta sẽ đăng xuất toàn bộ
+        if (_users.any((u) => u.isDisabled)) {
+          _handleDisabledUser();
+          return;
+        }
         
         if (_currentUser != null) {
            try {
@@ -465,6 +473,16 @@ class UserProvider with ChangeNotifier {
         await _firestore.collection('groups').doc(oldGroupId).delete();
       }
     }
+  }
+
+  void _handleDisabledUser() {
+    FirebaseAuth.instance.signOut();
+    _authUid = null;
+    _currentUser = null;
+    _users = [];
+    _isLoading = false;
+    notifyListeners();
+    // Chúng ta không cần xóa listener ở đây vì authStateChanges ở main sẽ lo việc nhảy về Login
   }
 
   String _generateGroupCode() {
