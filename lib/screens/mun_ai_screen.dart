@@ -81,11 +81,31 @@ class _MunAIScreenState extends State<MunAIScreen> {
   Future<void> _generateTitleForSession(String firstMessage) async {
     try {
       final prompt =
-          "Tóm tắt tin nhắn sau của người dùng thành một tiêu đề ngắn gọn (không quá 6 chữ). Chỉ trả về tiêu đề, không có dấu ngoặc kép hay giải thích thêm.\nTin nhắn: $firstMessage";
+          "Tóm tắt tin nhắn sau thành một tiêu đề cực kỳ ngắn gọn (không quá 5 chữ). "
+          "QUAN TRỌNG: CHỈ TRẢ VỀ TIÊU ĐỀ, TUYỆT ĐỐI KHÔNG TRẢ VỀ SUY NGHĨ (THOUGHT) HAY GIẢI THÍCH.\n"
+          "Tin nhắn: $firstMessage";
       final response = await _model.generateContent([Content.text(prompt)]);
-      if (response.text != null && response.text!.isNotEmpty) {
+      String? title = response.text;
+      
+      if (title != null && title.isNotEmpty) {
+        // Loại bỏ phần suy nghĩ (think) nếu có (thường gặp ở các model như DeepSeek-R1 hoặc Gemini CoT)
+        if (title.contains('</think>')) {
+          title = title.split('</think>').last;
+        } else if (title.toLowerCase().startsWith('think:')) {
+          // Xử lý trường hợp output có dạng "Think: ... \n\n Tiêu đề"
+          final parts = title.split('\n\n');
+          if (parts.length > 1) {
+            title = parts.last;
+          } else {
+            title = title.replaceFirst(RegExp(r'think:.*', caseSensitive: false, dotAll: true), '');
+          }
+        }
+
+        title = title.trim().replaceAll('"', '');
+        if (title.isEmpty) title = "Cuộc trò chuyện";
+
         setState(() {
-          _currentSession!.title = response.text!.trim().replaceAll('"', '');
+          _currentSession!.title = title!;
         });
         if (!mounted) return;
         context.read<UserProvider>().saveChatSession(_currentSession!);

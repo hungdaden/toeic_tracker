@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'add_score_screen.dart';
 import 'learning_path_screen.dart';
 import '../models/toeic_score.dart';
+import '../widgets/dynamic_island_notification.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -185,6 +186,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             SlidableAction(
                               onPressed: (_) {
                                 provider.deleteScore(score.id);
+                                DynamicIslandNotification.show(
+                                  context,
+                                  title: 'Đã xóa',
+                                  message: 'Đã xóa điểm thi ngày ${DateFormat('dd/MM/yyyy').format(score.date)}',
+                                  type: NotificationType.warning,
+                                );
                               },
                               backgroundColor: Colors.red,
                               foregroundColor: Colors.white,

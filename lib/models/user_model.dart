@@ -11,6 +11,9 @@ class UserModel {
   bool isFourSkills; // Thêm thuộc tính này
   List<ToeicScore> scores;
   List<MunAIChatSession> chatHistory;
+  String? groupId; // Mã nhóm (5 ký tự)
+  String? groupRole; // 'leader', 'co-leader', 'member'
+  String? pendingGroupId; // Mã nhóm đang chờ duyệt
 
   UserModel({
     required this.id,
@@ -20,6 +23,9 @@ class UserModel {
     this.targetScore = 500,
     this.avatarUrl,
     this.isFourSkills = false, // Mặc định là false (2 kỹ năng)
+    this.groupId,
+    this.groupRole,
+    this.pendingGroupId,
     List<ToeicScore>? scores,
     List<MunAIChatSession>? chatHistory,
   })  : scores = scores ?? [],
@@ -55,6 +61,9 @@ class UserModel {
     'targetScore': targetScore,
     'avatarUrl': avatarUrl,
     'isFourSkills': isFourSkills,
+    'groupId': groupId,
+    'groupRole': groupRole,
+    'pendingGroupId': pendingGroupId,
     'scores': scores.map((x) => x.toJson()).toList(),
     'chatHistory': chatHistory.map((x) => x.toJson()).toList(),
   };
@@ -67,6 +76,9 @@ class UserModel {
     targetScore: json['targetScore'] ?? 500,
     avatarUrl: json['avatarUrl'],
     isFourSkills: json['isFourSkills'] ?? false,
+    groupId: json['groupId'],
+    groupRole: json['groupRole'],
+    pendingGroupId: json['pendingGroupId'],
     scores:
         (json['scores'] as List<dynamic>?)
             ?.map((x) => ToeicScore.fromJson(x))

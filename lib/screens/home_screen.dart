@@ -70,9 +70,12 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Tổng Quan Học Tập')),
       body: Consumer<UserProvider>(
         builder: (context, provider, child) {
-          final users = provider.users;
+          final currentUser = provider.currentUser;
+          final localUsers = provider.users;
+          final groupMembers = provider.groupMembers;
+          final isInGroup = currentUser?.groupId != null && currentUser!.groupId!.isNotEmpty;
 
-          if (users.isEmpty) {
+          if (localUsers.isEmpty) {
             return const Center(
               child: Text(
                 'Chưa có hồ sơ nào. Hãy tạo một hồ sơ mới ở mục "Hồ sơ".',
@@ -81,11 +84,37 @@ class HomeScreen extends StatelessWidget {
             );
           }
 
+          // Kết hợp danh sách: hiện hồ sơ cục bộ trước, sau đó là các thành viên nhóm khác (nếu có)
+          List<UserModel> displayList = List.from(localUsers);
+          if (isInGroup) {
+            // Lọc ra những người trong nhóm nhưng không thuộc tài khoản cục bộ (đã có trong localUsers)
+            final otherMembers = groupMembers.where((m) => !localUsers.any((lu) => lu.id == m.id)).toList();
+            displayList.addAll(otherMembers);
+          }
+
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: users.length,
+            itemCount: displayList.length,
             itemBuilder: (context, index) {
-              return _UserCard(user: users[index]);
+              final user = displayList[index];
+              final isLocal = localUsers.any((lu) => lu.id == user.id);
+              
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (index == 0) 
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 8.0),
+                      child: Text('Hồ sơ của bạn', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                    ),
+                  if (isInGroup && index == localUsers.length)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8.0, bottom: 8.0),
+                      child: Text('Thành viên khác trong nhóm', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                    ),
+                  _UserCard(user: user, isLocal: isLocal),
+                ],
+              );
             },
           );
         },
@@ -96,8 +125,9 @@ class HomeScreen extends StatelessWidget {
 
 class _UserCard extends StatefulWidget {
   final UserModel user;
+  final bool isLocal;
 
-  const _UserCard({super.key, required this.user});
+  const _UserCard({super.key, required this.user, required this.isLocal});
 
   @override
   State<_UserCard> createState() => _UserCardState();
@@ -109,6 +139,7 @@ class _UserCardState extends State<_UserCard> {
   @override
   Widget build(BuildContext context) {
     final user = widget.user;
+    final isLocal = widget.isLocal;
     final scores = List<ToeicScore>.from(user.scores);
     scores.sort((a, b) => b.date.compareTo(a.date));
 
@@ -155,6 +186,18 @@ class _UserCardState extends State<_UserCard> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          !isLocal 
+                            ? Container(
+                                margin: const EdgeInsets.only(left: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.blue, width: 0.5),
+                                ),
+                                child: const Text('NHÓM', style: TextStyle(fontSize: 10, color: Colors.blue, fontWeight: FontWeight.bold)),
+                              )
+                            : const SizedBox.shrink(),
                           if (user.currentStreak >= 3)
                             Container(
                               margin: const EdgeInsets.only(left: 8),

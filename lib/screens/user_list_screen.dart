@@ -10,6 +10,7 @@ import 'edit_user_screen.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../services/storage_service.dart';
 import '../widgets/skills_toggle.dart';
+import '../widgets/dynamic_island_notification.dart';
 
 import '../providers/auth_provider.dart';
 
@@ -143,6 +144,12 @@ class _UserListScreenState extends State<UserListScreen> {
                                     TextButton(
                                       onPressed: () {
                                         provider.deleteUser(user.id);
+                                        DynamicIslandNotification.show(
+                                          context,
+                                          title: 'Đã xóa hồ sơ',
+                                          message: 'Đã xóa hồ sơ của ${user.name}',
+                                          type: NotificationType.warning,
+                                        );
                                         Navigator.pop(d);
                                       },
                                       child: const Text(
@@ -222,9 +229,12 @@ class _AddUserDialogState extends State<AddUserDialog> {
         if (downloadUrl != null) {
           _avatarUrl = downloadUrl; // Gán link web
         } else {
-          ScaffoldMessenger.of(
+          DynamicIslandNotification.show(
             context,
-          ).showSnackBar(const SnackBar(content: Text('Lỗi tải ảnh lên!')));
+            title: 'Lỗi',
+            message: 'Không thể tải ảnh lên!',
+            type: NotificationType.error,
+          );
         }
       });
     }
@@ -233,8 +243,11 @@ class _AddUserDialogState extends State<AddUserDialog> {
   void _save() {
     if (_formKey.currentState!.validate()) {
       if (_isUploading) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đang tải ảnh lên, vui lòng chờ...')),
+        DynamicIslandNotification.show(
+          context,
+          title: 'Đang tải',
+          message: 'Đang tải ảnh lên, vui lòng chờ...',
+          type: NotificationType.info,
         );
         return;
       }
@@ -249,6 +262,12 @@ class _AddUserDialogState extends State<AddUserDialog> {
         isFourSkills: _isFourSkills,
       );
       context.read<UserProvider>().addUser(user);
+      DynamicIslandNotification.show(
+        context,
+        title: 'Thành công',
+        message: 'Đã tạo hồ sơ ${user.name} thành công!',
+        type: NotificationType.success,
+      );
       Navigator.pop(context);
     }
   }

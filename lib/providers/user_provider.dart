@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../models/toeic_score.dart';
 import '../models/mun_ai_chat.dart';
+import '../models/group_model.dart';
 
 class UserProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -14,10 +16,19 @@ class UserProvider with ChangeNotifier {
   UserModel? _currentUser;
   bool _isLoading = false; // Bắt đầu bằng false để không block UI nếu chưa đăng nhập
   StreamSubscription<QuerySnapshot>? _usersSubscription;
+  StreamSubscription<QuerySnapshot>? _groupSubscription;
   String? _authUid;
+  List<UserModel> _groupMembers = [];
+  List<UserModel> _pendingMembers = [];
+  GroupModel? _currentGroup;
+  StreamSubscription<DocumentSnapshot>? _groupMetadataSubscription;
+  StreamSubscription<QuerySnapshot>? _pendingMembersSubscription;
 
   List<UserModel> get users => _users;
   UserModel? get currentUser => _currentUser;
+  List<UserModel> get groupMembers => _groupMembers;
+  List<UserModel> get pendingMembers => _pendingMembers;
+  GroupModel? get currentGroup => _currentGroup;
   bool get isLoading => _isLoading;
 
   UserProvider();
@@ -25,6 +36,9 @@ class UserProvider with ChangeNotifier {
   @override
   void dispose() {
     _usersSubscription?.cancel();
+    _groupSubscription?.cancel();
+    _groupMetadataSubscription?.cancel();
+    _pendingMembersSubscription?.cancel();
     super.dispose();
   }
 
@@ -33,7 +47,13 @@ class UserProvider with ChangeNotifier {
     _authUid = authUid;
     
     _usersSubscription?.cancel();
+    _groupSubscription?.cancel();
+    _groupMetadataSubscription?.cancel();
+    _pendingMembersSubscription?.cancel();
     _users.clear();
+    _groupMembers.clear();
+    _pendingMembers.clear();
+    _currentGroup = null;
     _currentUser = null;
     
     if (_authUid != null) {
@@ -65,13 +85,21 @@ class UserProvider with ChangeNotifier {
         
         if (_currentUser != null) {
            try {
-             _currentUser = _users.firstWhere((u) => u.id == _currentUser!.id);
+             final updatedUser = _users.firstWhere((u) => u.id == _currentUser!.id);
+             // Nếu groupId thay đổi, cập nhật listener nhóm
+             if (updatedUser.groupId != _currentUser!.groupId) {
+               _listenToGroup(updatedUser.groupId);
+             }
+             _currentUser = updatedUser;
            } catch (e) {
              _currentUser = null;
+             _groupSubscription?.cancel();
+             _groupMembers = [];
            }
         } else if (_users.isNotEmpty) {
            // Tự động chọn profile đầu tiên nếu có
            _currentUser = _users.first;
+           _listenToGroup(_currentUser!.groupId);
         }
         
         _isLoading = false;
@@ -118,6 +146,9 @@ class UserProvider with ChangeNotifier {
   }
 
   void setCurrentUser(UserModel user) {
+    if (_currentUser?.id != user.id || _currentUser?.groupId != user.groupId) {
+      _listenToGroup(user.groupId);
+    }
     _currentUser = user;
     notifyListeners();
   }
@@ -227,5 +258,219 @@ class UserProvider with ChangeNotifier {
     } catch (e) {
       debugPrint("Lỗi khi xóa lịch sử chat khỏi Firestore: $e");
     }
+  }
+
+  // --- Group Logic ---
+
+  void _listenToGroup(String? groupId) {
+    _groupSubscription?.cancel();
+    _groupMetadataSubscription?.cancel();
+    _pendingMembersSubscription?.cancel();
+
+    if (groupId == null || groupId.isEmpty) {
+      _groupMembers = [];
+      _pendingMembers = [];
+      _currentGroup = null;
+      notifyListeners();
+      return;
+    }
+
+    // 1. Listen to group members
+    _groupSubscription = _firestore
+        .collection('users')
+        .where('groupId', isEqualTo: groupId)
+        .snapshots()
+        .listen((snapshot) {
+      _groupMembers = snapshot.docs
+          .map((doc) => UserModel.fromJson(doc.data() as Map<String, dynamic>))
+          .toList();
+      notifyListeners();
+    });
+
+    // 2. Listen to group metadata
+    _groupMetadataSubscription = _firestore
+        .collection('groups')
+        .doc(groupId)
+        .snapshots()
+        .listen((doc) {
+      if (doc.exists) {
+        _currentGroup = GroupModel.fromJson(doc.data() as Map<String, dynamic>);
+        notifyListeners();
+      }
+    });
+
+    // 3. Listen to pending members (only if current user is leader or co-leader)
+    // Actually, we can just listen and filter in the UI, but let's be efficient
+    _pendingMembersSubscription = _firestore
+        .collection('users')
+        .where('pendingGroupId', isEqualTo: groupId)
+        .snapshots()
+        .listen((snapshot) {
+      _pendingMembers = snapshot.docs
+          .map((doc) => UserModel.fromJson(doc.data() as Map<String, dynamic>))
+          .toList();
+      notifyListeners();
+    });
+  }
+
+  Future<void> createGroup(String name) async {
+    if (_currentUser == null) return;
+    
+    final String newGroupCode = _generateGroupCode();
+    
+    // Tạo document trong collection 'groups' để đánh dấu nhóm tồn tại
+    await _firestore.collection('groups').doc(newGroupCode).set({
+      'id': newGroupCode,
+      'name': name.isEmpty ? 'Nhóm của ${_currentUser!.name}' : name,
+      'requireApproval': false,
+      'leaderId': _currentUser!.id,
+      'leaderAuthUid': _authUid, // Lưu Auth UID để bảo mật
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    // Gán groupId và role cho user hiện tại
+    final updatedUser = _currentUser!;
+    updatedUser.groupId = newGroupCode;
+    updatedUser.groupRole = 'leader';
+    
+    await updateUser(updatedUser);
+    _listenToGroup(newGroupCode);
+  }
+
+  Future<String> joinGroup(String code) async {
+    if (_currentUser == null) return 'error';
+    
+    final cleanCode = code.trim().toUpperCase();
+    if (cleanCode.length != 5) return 'invalid_code';
+
+    try {
+      // Kiểm tra xem nhóm có tồn tại trong collection 'groups' không
+      final groupDoc = await _firestore.collection('groups').doc(cleanCode).get();
+        
+      if (!groupDoc.exists) {
+        return 'not_found';
+      }
+
+      final group = GroupModel.fromJson(groupDoc.data() as Map<String, dynamic>);
+
+      if (group.requireApproval) {
+        // Cần phê duyệt
+        final updatedUser = _currentUser!;
+        updatedUser.pendingGroupId = cleanCode;
+        await updateUser(updatedUser);
+        return 'pending';
+      } else {
+        // Gia nhập luôn
+        final updatedUser = _currentUser!;
+        updatedUser.groupId = cleanCode;
+        updatedUser.groupRole = 'member';
+        updatedUser.pendingGroupId = null;
+        await updateUser(updatedUser);
+        _listenToGroup(cleanCode);
+        return 'success';
+      }
+    } catch (e) {
+      debugPrint('Error joining group: $e');
+      return 'error';
+    }
+  }
+
+  Future<void> updateGroupName(String name) async {
+    if (_currentGroup == null) return;
+    await _firestore.collection('groups').doc(_currentGroup!.id).update({'name': name});
+  }
+
+  Future<void> toggleApproval(bool value) async {
+    if (_currentGroup == null) return;
+    await _firestore.collection('groups').doc(_currentGroup!.id).update({'requireApproval': value});
+  }
+
+  Future<void> approveMember(UserModel member) async {
+    if (_currentGroup == null) return;
+    await _firestore.collection('users').doc(member.id).update({
+      'groupId': _currentGroup!.id,
+      'groupRole': 'member',
+      'pendingGroupId': FieldValue.delete(), // Xóa pendingGroupId
+    });
+  }
+
+  Future<void> rejectMember(UserModel member) async {
+    await _firestore.collection('users').doc(member.id).update({
+      'pendingGroupId': FieldValue.delete(),
+    });
+  }
+
+  Future<void> promoteMember(UserModel member) async {
+    await _firestore.collection('users').doc(member.id).update({
+      'groupRole': 'co-leader',
+    });
+  }
+
+  Future<void> kickMember(UserModel member) async {
+    await _firestore.collection('users').doc(member.id).update({
+      'groupId': FieldValue.delete(),
+      'groupRole': FieldValue.delete(),
+    });
+  }
+
+  Future<void> leaveGroup() async {
+    if (_currentUser == null || _currentUser!.groupId == null) return;
+    
+    final String oldGroupId = _currentUser!.groupId!;
+    final bool isLeader = _currentUser!.groupRole == 'leader';
+
+    // 1. Cập nhật bản thân
+    final updatedSelf = _currentUser!;
+    updatedSelf.groupId = null;
+    updatedSelf.groupRole = null;
+    await updateUser(updatedSelf);
+
+    // 2. Kiểm tra xem có phải là người cuối cùng không
+    if (_groupMembers.length <= 1) {
+      // Xóa nhóm khỏi Firestore vì không còn ai
+      await _firestore.collection('groups').doc(oldGroupId).delete();
+      return;
+    }
+
+    // 3. Logic chuyển giao quyền lực nếu là trưởng nhóm
+    if (isLeader) {
+      // Tìm người kế nhiệm (ưu tiên phó nhóm)
+      UserModel? nextLeader;
+      try {
+        nextLeader = _groupMembers.firstWhere(
+          (m) => m.id != updatedSelf.id && m.groupRole == 'co-leader',
+        );
+      } catch (_) {
+        try {
+          nextLeader = _groupMembers.firstWhere(
+            (m) => m.id != updatedSelf.id,
+          );
+        } catch (_) {
+          nextLeader = null;
+        }
+      }
+
+      if (nextLeader != null) {
+        // Có người kế nhiệm
+        nextLeader.groupRole = 'leader';
+        await _firestore.collection('users').doc(nextLeader.id).update({
+          'groupRole': 'leader',
+        });
+        await _firestore.collection('groups').doc(oldGroupId).update({
+          'leaderId': nextLeader.id,
+          'leaderAuthUid': nextLeader.authUid,
+        });
+      } else {
+        // Trường hợp hy hữu không tìm thấy ai dù list > 1, xóa nhóm cho an toàn
+        await _firestore.collection('groups').doc(oldGroupId).delete();
+      }
+    }
+  }
+
+  String _generateGroupCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final rnd = math.Random();
+    return String.fromCharCodes(Iterable.generate(
+        5, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))));
   }
 }

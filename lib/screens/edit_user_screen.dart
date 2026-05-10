@@ -8,6 +8,7 @@ import '../providers/user_provider.dart';
 // QUAN TRỌNG: Đảm bảo bạn đã import đúng đường dẫn tới file storage_service của bạn
 import '../services/storage_service.dart';
 import '../widgets/skills_toggle.dart';
+import '../widgets/dynamic_island_notification.dart';
 
 class EditUserDialog extends StatefulWidget {
   final UserModel user;
@@ -69,8 +70,11 @@ class _EditUserDialogState extends State<EditUserDialog> {
               downloadUrl; // Gán link Firebase trả về vào biến hiển thị
         } else {
           // Báo lỗi nếu việc upload thất bại (do mạng, do rules Firebase...)
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Lỗi tải ảnh lên. Vui lòng thử lại.')),
+          DynamicIslandNotification.show(
+            context,
+            title: 'Lỗi',
+            message: 'Lỗi tải ảnh lên. Vui lòng thử lại.',
+            type: NotificationType.error,
           );
         }
       });
@@ -81,10 +85,11 @@ class _EditUserDialogState extends State<EditUserDialog> {
     if (_formKey.currentState!.validate()) {
       // 3. Chặn người dùng bấm lưu nếu ảnh vẫn đang tải lên dở dang
       if (_isUploading) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đang tải ảnh lên Firebase, vui lòng chờ...'),
-          ),
+        DynamicIslandNotification.show(
+          context,
+          title: 'Đang tải',
+          message: 'Đang tải ảnh lên Firebase, vui lòng chờ...',
+          type: NotificationType.info,
         );
         return;
       }
@@ -103,6 +108,12 @@ class _EditUserDialogState extends State<EditUserDialog> {
             widget.user.chatHistory, // Quan trọng: Giữ lại lịch sử chat
       );
       context.read<UserProvider>().updateUser(updatedUser);
+      DynamicIslandNotification.show(
+        context,
+        title: 'Thành công',
+        message: 'Đã cập nhật hồ sơ ${updatedUser.name}!',
+        type: NotificationType.success,
+      );
       Navigator.pop(context);
     }
   }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/dynamic_island_notification.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -68,15 +69,21 @@ class _LoginScreenState extends State<LoginScreen> {
     final confirmPassword = _confirmPasswordController.text.trim();
 
     if (email.isEmpty || password.isEmpty || (!_isLogin && confirmPassword.isEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập đầy đủ thông tin.')),
+      DynamicIslandNotification.show(
+        context,
+        title: 'Thông báo',
+        message: 'Vui lòng nhập đầy đủ thông tin.',
+        type: NotificationType.warning,
       );
       return;
     }
 
     if (!_isLogin && password != confirmPassword) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mật khẩu nhập lại không khớp.')),
+      DynamicIslandNotification.show(
+        context,
+        title: 'Lỗi',
+        message: 'Mật khẩu nhập lại không khớp.',
+        type: NotificationType.error,
       );
       return;
     }
@@ -91,8 +98,19 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      DynamicIslandNotification.show(
+        context,
+        title: 'Lỗi',
+        message: error,
+        type: NotificationType.error,
+      );
     } else {
+      DynamicIslandNotification.show(
+        context,
+        title: 'Thành công',
+        message: _isLogin ? 'Đăng nhập thành công!' : 'Đăng ký tài khoản thành công!',
+        type: NotificationType.success,
+      );
       Navigator.pop(context); // Quay lại sau khi đăng nhập thành công
     }
   }
@@ -104,8 +122,19 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      DynamicIslandNotification.show(
+        context,
+        title: 'Lỗi',
+        message: error,
+        type: NotificationType.error,
+      );
     } else {
+      DynamicIslandNotification.show(
+        context,
+        title: 'Thành công',
+        message: 'Đăng nhập với Google thành công!',
+        type: NotificationType.success,
+      );
       Navigator.pop(context);
     }
   }

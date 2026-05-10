@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/toeic_score.dart';
 import '../providers/user_provider.dart';
 import 'package:intl/intl.dart';
+import '../widgets/dynamic_island_notification.dart';
 
 class AddScoreScreen extends StatefulWidget {
   final ToeicScore? existingScore;
@@ -45,8 +46,20 @@ class _AddScoreScreenState extends State<AddScoreScreen> {
       final userProvider = context.read<UserProvider>();
       if (widget.existingScore != null) {
         userProvider.updateScore(newScore);
+        DynamicIslandNotification.show(
+          context,
+          title: 'Thành công',
+          message: 'Đã cập nhật điểm số thành công!',
+          type: NotificationType.success,
+        );
       } else {
         userProvider.addScore(newScore);
+        DynamicIslandNotification.show(
+          context,
+          title: 'Thành công',
+          message: 'Đã thêm điểm số mới!',
+          type: NotificationType.success,
+        );
       }
       
       final targetScore = userProvider.currentUser?.targetScore ?? 500;
