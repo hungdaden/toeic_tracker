@@ -64,11 +64,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _submit() async {
     final authProvider = context.read<AuthProvider>();
-    final email = _emailController.text.trim();
+    String emailOrUsername = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
 
-    if (email.isEmpty || password.isEmpty || (!_isLogin && confirmPassword.isEmpty)) {
+    if (emailOrUsername.isEmpty || password.isEmpty || (!_isLogin && confirmPassword.isEmpty)) {
       DynamicIslandNotification.show(
         context,
         title: 'Thông báo',
@@ -76,6 +76,12 @@ class _LoginScreenState extends State<LoginScreen> {
         type: NotificationType.warning,
       );
       return;
+    }
+
+    // Nếu không chứa '@', coi như là Username và tự động thêm hậu tố để Firebase chấp nhận
+    String finalEmail = emailOrUsername;
+    if (!emailOrUsername.contains('@')) {
+      finalEmail = '$emailOrUsername@toeic.app';
     }
 
     if (!_isLogin && password != confirmPassword) {
@@ -90,9 +96,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
     String? error;
     if (_isLogin) {
-      error = await authProvider.signInWithEmail(email, password);
+      error = await authProvider.signInWithEmail(finalEmail, password);
     } else {
-      error = await authProvider.signUpWithEmail(email, password);
+      error = await authProvider.signUpWithEmail(finalEmail, password);
     }
 
     if (!mounted) return;
@@ -164,8 +170,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextField(
                     controller: _emailController,
                     decoration: InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: const Icon(Icons.email),
+                      labelText: 'Email hoặc Username',
+                      prefixIcon: const Icon(Icons.person_outline_rounded),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     keyboardType: TextInputType.emailAddress,

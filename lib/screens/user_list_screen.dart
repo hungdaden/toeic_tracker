@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'exam_list_screen.dart';
 import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -13,6 +14,7 @@ import '../widgets/skills_toggle.dart';
 import '../widgets/dynamic_island_notification.dart';
 
 import '../providers/auth_provider.dart';
+import 'exam_list_screen.dart';
 
 class UserListScreen extends StatefulWidget {
   const UserListScreen({super.key});
@@ -42,7 +44,6 @@ class _UserListScreenState extends State<UserListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chọn Hồ Sơ Học Tập'),
-        // Xóa nút back (leading) vì giờ màn hình này là 1 tab trong thanh điều hướng
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),

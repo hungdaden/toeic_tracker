@@ -10,6 +10,7 @@ import 'add_score_screen.dart';
 import 'learning_path_screen.dart';
 import '../models/toeic_score.dart';
 import '../widgets/dynamic_island_notification.dart';
+import 'exam_list_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -111,21 +112,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ],
             ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.route),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          LearningPathScreen(targetScore: displayScore),
-                    ),
-                  );
-                },
-                tooltip: 'Lộ trình học',
-              ),
-            ],
           ),
           body: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -394,32 +380,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ],
               ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            LearningPathScreen(targetScore: displayedScore),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                LearningPathScreen(targetScore: displayedScore),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.auto_awesome, size: 18),
+                      label: const Text(
+                        'Lộ trình',
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.auto_awesome),
-                  label: const Text(
-                    'Xem Lộ Trình Đề Xuất',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF3949AB),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white.withOpacity(0.2),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ExamListScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.assignment_turned_in_rounded, size: 18),
+                      label: const Text(
+                        'Luyện thi thử',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF3949AB),
+                        elevation: 5,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -492,16 +506,46 @@ class _AimHitOverlayState extends State<_AimHitOverlay> {
           duration: const Duration(milliseconds: 500),
           child: Stack(
             children: [
+              // Bắn từ bên trái
+              Align(
+                alignment: Alignment.bottomLeft,
+                child: ConfettiWidget(
+                  confettiController: widget.confettiController,
+                  blastDirection: -3.14 / 4, // Chếch lên phải
+                  emissionFrequency: 0.3,
+                  numberOfParticles: 20,
+                  maxBlastForce: 100,
+                  minBlastForce: 60,
+                  gravity: 0.2,
+                  colors: const [Colors.red, Colors.yellow, Colors.pink, Colors.orange],
+                ),
+              ),
+              // Bắn từ bên phải
+              Align(
+                alignment: Alignment.bottomRight,
+                child: ConfettiWidget(
+                  confettiController: widget.confettiController,
+                  blastDirection: -3 * 3.14 / 4, // Chếch lên trái
+                  emissionFrequency: 0.3,
+                  numberOfParticles: 20,
+                  maxBlastForce: 100,
+                  minBlastForce: 60,
+                  gravity: 0.2,
+                  colors: const [Colors.blue, Colors.green, Colors.purple, Colors.cyan],
+                ),
+              ),
+              // Bắn từ giữa thò thụt tưng bừng
               Align(
                 alignment: Alignment.bottomCenter,
                 child: ConfettiWidget(
                   confettiController: widget.confettiController,
                   blastDirection: -3.14 / 2, // UP
-                  maxBlastForce: 120, // Tăng lực bắn
-                  minBlastForce: 50,
-                  emissionFrequency: 0.2, // Tần suất bắn dày đặc
-                  numberOfParticles: 80, // Nhiều pháo hoa hơn
-                  gravity: 0.15,
+                  blastDirectionality: BlastDirectionality.explosive, // Bắn tỏa tròn
+                  maxBlastForce: 150,
+                  minBlastForce: 80,
+                  emissionFrequency: 0.4,
+                  numberOfParticles: 40,
+                  gravity: 0.1,
                   colors: const [
                     Colors.red,
                     Colors.blue,
@@ -510,6 +554,7 @@ class _AimHitOverlayState extends State<_AimHitOverlay> {
                     Colors.pink,
                     Colors.purple,
                     Colors.orange,
+                    Colors.white,
                   ],
                 ),
               ),

@@ -10,6 +10,7 @@ import 'mun_ai_screen.dart';
 import 'login_screen.dart';
 import '../providers/user_provider.dart';
 import '../providers/auth_provider.dart';
+import 'exam_list_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final int initialIndex;
@@ -30,6 +31,13 @@ class _MainScreenState extends State<MainScreen> {
     const UserListScreen(),
   ];
 
+  void _openExamList() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ExamListScreen()),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -39,18 +47,34 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBody:
-          false,
+      extendBody: false,
       body: _pages[_currentIndex],
       bottomNavigationBar: CurvedNavigationBar(
         index: _currentIndex,
         height: 60.0,
-        items: const <Widget>[
-          Icon(Icons.home_rounded, size: 30, color: Colors.white),
-          Icon(Icons.person_rounded, size: 30, color: Colors.white),
-          Icon(FontAwesomeIcons.cat, size: 30, color: Colors.white),
-          Icon(Icons.emoji_events_rounded, size: 30, color: Colors.white),
-          Icon(Icons.group_rounded, size: 30, color: Colors.white),
+        items: <Widget>[
+          const Center(child: Icon(Icons.home_rounded, size: 28, color: Colors.white)),
+          const Center(child: Icon(Icons.person_rounded, size: 28, color: Colors.white)),
+          Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              padding: EdgeInsets.all(_currentIndex == 2 ? 12 : 0),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _currentIndex == 2 ? Colors.white.withOpacity(0.2) : Colors.transparent,
+                boxShadow: _currentIndex == 2 
+                  ? [BoxShadow(color: const Color(0xFF4F46E5).withOpacity(0.4), blurRadius: 15, spreadRadius: 5)] 
+                  : [],
+              ),
+              child: Icon(
+                FontAwesomeIcons.cat, 
+                size: _currentIndex == 2 ? 32 : 28, 
+                color: Colors.white
+              ),
+            ),
+          ),
+          const Center(child: Icon(Icons.emoji_events_rounded, size: 28, color: Colors.white)),
+          const Center(child: Icon(Icons.group_rounded, size: 28, color: Colors.white)),
         ],
         color: const Color(0xFF1E1E1E), // Nền xám đen của thanh
         buttonBackgroundColor: const Color(
