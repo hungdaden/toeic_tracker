@@ -41,26 +41,40 @@ class NotificationService {
     _listenToFirestoreNotifications();
   }
 
+  bool _isInitialLoad = true;
+
   void _listenToFirestoreNotifications() {
-    // Chỉ lấy các thông báo mới được tạo sau thời điểm app mở
-    final startTime = DateTime.now();
+    print('Thông báo: Bắt đầu lắng nghe Firestore...');
     
     FirebaseFirestore.instance
         .collection('notifications')
-        .where('sentAt', isGreaterThan: startTime) // Dùng sentAt đồng bộ với Admin
+        .orderBy('sentAt', descending: true)
+        .limit(5) // Chỉ lấy 5 tin gần nhất để tiết kiệm dữ liệu
         .snapshots()
         .listen((snapshot) {
+      
+      // Nếu là lần đầu tiên nạp dữ liệu, chúng ta đánh dấu là "tin cũ" và bỏ qua
+      if (_isInitialLoad) {
+        print('Thông báo: Đã nạp danh sách tin cũ, đang chờ tin mới...');
+        _isInitialLoad = false;
+        return;
+      }
+
       for (var change in snapshot.docChanges) {
+        // Chỉ hiện thông báo nếu đó là một tài liệu MỚI được thêm vào
         if (change.type == DocumentChangeType.added) {
           final data = change.doc.data();
           if (data != null) {
+            print('Thông báo: Nhận được tin mới từ Admin: ${data['title']}');
             _showDynamicNotification(
               data['title'] ?? 'Thông báo từ Admin',
-              data['body'] ?? '', // Dùng body đồng bộ với Admin
+              data['body'] ?? '',
             );
           }
         }
       }
+    }, onError: (error) {
+      print('Lỗi lắng nghe Firestore: $error');
     });
   }
 
