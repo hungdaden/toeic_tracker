@@ -7,6 +7,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/user_provider.dart';
 import '../models/mun_ai_chat.dart';
+import '../models/toeic_score.dart';
 
 class MunAIScreen extends StatefulWidget {
   const MunAIScreen({super.key});
@@ -19,7 +20,10 @@ class _MunAIScreenState extends State<MunAIScreen> {
   final TextEditingController _controller = TextEditingController();
   bool _isLoading = false;
   GenerativeModel? _model;
-  String _systemPrompt = 'Bạn là Mun AI, trợ lý học tập TOEIC. Hãy trả lời chuyên nghiệp và hữu ích.';
+  
+  final String _basePrompt = 'Bạn là Mun AI, trợ lý học tập TOEIC. Hãy trả lời chuyên nghiệp và hữu ích, sử dụng tiếng Việt.';
+  String _adminPrompt = '';
+  
   final ScrollController _scrollController = ScrollController();
 
   MunAIChatSession? _currentSession;
@@ -43,7 +47,7 @@ class _MunAIScreenState extends State<MunAIScreen> {
       if (doc.exists) {
         final data = doc.data()!;
         modelName = data['aiModel'] ?? 'gemini-2.0-flash';
-        _systemPrompt = data['aiSystemPrompt'] ?? _systemPrompt;
+        _adminPrompt = data['aiSystemPrompt'] ?? '';
       }
       
       setState(() {
@@ -76,6 +80,7 @@ class _MunAIScreenState extends State<MunAIScreen> {
           ),
         ],
       );
+      _isSidebarOpen = false;
     });
   }
 
@@ -105,6 +110,12 @@ class _MunAIScreenState extends State<MunAIScreen> {
 
     setState(() {
       _currentSession!.messages.add(MunAIChatMessage(role: 'user', text: text));
+      
+      // Tự động đặt tên cho chat nếu là tin nhắn đầu tiên của user
+      if (_currentSession!.title == 'New Chat' || _currentSession!.title == 'Chat Mới') {
+        _currentSession!.title = text.length > 30 ? '${text.substring(0, 27)}...' : text;
+      }
+      
       _isLoading = true;
     });
     _controller.clear();
@@ -114,18 +125,44 @@ class _MunAIScreenState extends State<MunAIScreen> {
       final userProvider = context.read<UserProvider>();
       final currentUser = userProvider.currentUser;
 
-      String contextPromt = "SYSTEM PROMPT: $_systemPrompt\n\n";
-      
-      if (currentUser != null) {
-        contextPromt += "DỮ LIỆU NGƯỜI DÙNG:\n";
-        contextPromt += "- Tên: ${currentUser.name}\n";
-        contextPromt += "- Mục tiêu: ${currentUser.targetScore}\n";
-        if (currentUser.scores.isNotEmpty) {
-          contextPromt += "- Lịch sử thi: ${currentUser.scores.length} bài thi gần nhất.\n";
-        }
+      String combinedPrompt = "SYSTEM INSTRUCTION:\n$_basePrompt\n";
+      if (_adminPrompt.isNotEmpty) {
+        combinedPrompt += "ADDITIONAL ADMIN INSTRUCTIONS:\n$_adminPrompt\n";
       }
       
-      contextPromt += "\nCâu hỏi người dùng: $text";
+      String contextPromt = "$combinedPrompt\n";
+      
+      bool isFirstMessage = _currentSession!.messages.length == 1; // Chỉ có message của model ban đầu
+
+      if (currentUser != null) {
+        contextPromt += "DỮ LIỆU HỌC VIÊN HIỆN TẠI:\n";
+        contextPromt += "- Tên: ${currentUser.name}\n";
+        contextPromt += "- Mục tiêu: ${currentUser.targetScore} điểm\n";
+        contextPromt += "- Hệ đào tạo: ${currentUser.isFourSkills ? '4 kỹ năng (L-R-S-W)' : '2 kỹ năng (L-R)'}\n";
+        contextPromt += "- Chuỗi ngày học (Streak): ${currentUser.currentStreak} ngày\n";
+        
+        if (currentUser.scores.isNotEmpty) {
+          contextPromt += "- Lịch sử 5 bài thi gần nhất:\n";
+          final sortedScores = List<ToeicScore>.from(currentUser.scores)
+            ..sort((a, b) => b.date.compareTo(a.date));
+          final recentScores = sortedScores.take(5).toList();
+          
+          for (var s in recentScores) {
+            final dateStr = DateFormat('dd/MM/yyyy').format(s.date);
+            if (currentUser.isFourSkills) {
+              contextPromt += "  + $dateStr: L:${s.listeningScore}, R:${s.readingScore}, S:${s.speakingScore ?? 0}, W:${s.writingScore ?? 0} (Tổng: ${s.calculateTotal(true)})\n";
+            } else {
+              contextPromt += "  + $dateStr: L:${s.listeningScore}, R:${s.readingScore} (Tổng: ${s.calculateTotal(false)})\n";
+            }
+          }
+        }
+      }
+
+      if (isFirstMessage) {
+        contextPromt += "\nLƯU Ý QUAN TRỌNG: Đây là tin nhắn đầu tiên của cuộc hội thoại. Hãy bắt đầu câu trả lời của bạn bằng duy nhất 1 dòng chứa tiêu đề tóm tắt ngắn gọn cuộc trò chuyện này (không quá 5 từ) đặt trong ngoặc vuông [ ], ví dụ: [Mẹo thi Part 1]. Sau đó mới xuống dòng và trả lời bình thường.";
+      }
+      
+      contextPromt += "\nCÂU HỎI HỌC VIÊN: $text";
 
       List<Content> history = _currentSession!.messages
           .take(_currentSession!.messages.length - 1)
@@ -135,11 +172,27 @@ class _MunAIScreenState extends State<MunAIScreen> {
       final chat = _model!.startChat(history: history);
       final response = await chat.sendMessage(Content.text(contextPromt));
 
+      String responseText = response.text ?? 'Xin lỗi, mình không nhận được phản hồi.';
+      
+      // Xử lý tách tiêu đề nếu là tin nhắn đầu tiên
+      if (isFirstMessage && responseText.contains('[') && responseText.contains(']')) {
+        final start = responseText.indexOf('[');
+        final end = responseText.indexOf(']');
+        if (start < end) {
+          final title = responseText.substring(start + 1, end);
+          setState(() {
+            _currentSession!.title = title;
+          });
+          // Loại bỏ phần tiêu đề khỏi nội dung hiển thị
+          responseText = responseText.substring(end + 1).trim();
+        }
+      }
+
       setState(() {
         _currentSession!.messages.add(
           MunAIChatMessage(
             role: 'model',
-            text: response.text ?? 'Xin lỗi, mình không nhận được phản hồi.',
+            text: responseText,
           ),
         );
         _isLoading = false;
@@ -227,7 +280,7 @@ class _MunAIScreenState extends State<MunAIScreen> {
                     child: SpinKitThreeBounce(color: Colors.white, size: 20),
                   ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 32),
+                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 50), // Tăng padding bottom lên 50
                   child: Row(
                     children: [
                       Expanded(
@@ -284,6 +337,32 @@ class _MunAIScreenState extends State<MunAIScreen> {
                 title: Text(session.title, maxLines: 1, overflow: TextOverflow.ellipsis),
                 subtitle: Text(DateFormat('dd/MM HH:mm').format(session.createdAt), style: const TextStyle(fontSize: 12)),
                 onTap: () => _loadSession(session),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+                  onPressed: () {
+                    // Xác nhận xóa
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Xóa cuộc trò chuyện?'),
+                        content: const Text('Hành động này không thể hoàn tác.'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('HỦY')),
+                          TextButton(
+                            onPressed: () {
+                              userProvider.deleteChatSession(session.id);
+                              Navigator.pop(ctx);
+                              if (_currentSession?.id == session.id) {
+                                _createNewSession();
+                              }
+                            },
+                            child: const Text('XÓA', style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               );
             },
           ),
