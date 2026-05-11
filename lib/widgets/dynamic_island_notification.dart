@@ -9,10 +9,20 @@ class DynamicIslandNotification {
     required String message,
     NotificationType type = NotificationType.info,
     Duration duration = const Duration(seconds: 3),
+    OverlayState? overlayState,
   }) {
-    final overlayState = Overlay.of(context);
+    // Ưu tiên dùng overlayState truyền vào, nếu không có mới tìm trong context
+    OverlayState? state;
+    try {
+      state = overlayState ?? Overlay.maybeOf(context);
+    } catch (e) {
+      // Nếu vẫn lỗi, bỏ qua luôn để không hiện lỗi đỏ lên console
+      return;
+    }
+    
+    if (state == null) return;
+    
     late OverlayEntry overlayEntry;
-
     overlayEntry = OverlayEntry(
       builder: (context) => _NotificationWidget(
         title: title,
@@ -23,7 +33,7 @@ class DynamicIslandNotification {
       ),
     );
 
-    overlayState.insert(overlayEntry);
+    state.insert(overlayEntry);
   }
 }
 
@@ -61,7 +71,6 @@ class _NotificationWidgetState extends State<_NotificationWidget> with SingleTic
       duration: const Duration(milliseconds: 1000),
     );
 
-    // Slide down from -50 to 10
     _yOffsetAnimation = Tween<double>(begin: -100.0, end: 10.0).animate(
       CurvedAnimation(
         parent: _controller,
@@ -69,7 +78,6 @@ class _NotificationWidgetState extends State<_NotificationWidget> with SingleTic
       ),
     );
 
-    // Width animation: small pill to full width
     _widthAnimation = Tween<double>(begin: 80.0, end: 350.0).animate(
       CurvedAnimation(
         parent: _controller,
@@ -77,7 +85,6 @@ class _NotificationWidgetState extends State<_NotificationWidget> with SingleTic
       ),
     );
 
-    // Height animation: small height to content height
     _heightAnimation = Tween<double>(begin: 30.0, end: 70.0).animate(
       CurvedAnimation(
         parent: _controller,
@@ -85,7 +92,6 @@ class _NotificationWidgetState extends State<_NotificationWidget> with SingleTic
       ),
     );
 
-    // Content opacity - Start earlier to sync with expansion
     _contentOpacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,

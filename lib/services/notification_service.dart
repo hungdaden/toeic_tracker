@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -5,91 +6,86 @@ import '../widgets/dynamic_island_notification.dart';
 import '../main.dart'; // Để lấy navigatorKey
 
 class NotificationService {
+  // Singleton pattern
+  static final NotificationService _instance = NotificationService._internal();
+  factory NotificationService() => _instance;
+  NotificationService._internal();
+
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
+  bool _isInitialLoad = true;
+  StreamSubscription<QuerySnapshot>? _notificationSubscription;
 
   Future<void> init() async {
+    print('NotificationService: Đang khởi tạo với tài khoản mới...');
+    
+    // 1. Dọn dẹp listener cũ nếu có
+    await _notificationSubscription?.cancel();
+    _isInitialLoad = true; 
+
+    // 2. Lắng nghe Firestore
+    _listenToFirestoreNotifications();
+
+    // 3. Xin quyền FCM sau (Nếu lỗi hoặc kẹt cũng không ảnh hưởng đến Firestore)
     try {
-      // 1. Xin quyền thông báo (Dành cho iOS/Android)
       final settings = await _fcm.requestPermission(
         alert: true,
         badge: true,
         sound: true,
-      );
-
-      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        print('Thông báo: Đã được cấp quyền!');
-        
-        // 2. Tự động subscribe vào topic chung
-        await _fcm.subscribeToTopic('all_users');
-        print('Thông báo: Đã đăng ký topic all_users');
-      }
+      ).timeout(const Duration(seconds: 5));
+      print('NotificationService: Quyền thông báo = ${settings.authorizationStatus}');
     } catch (e) {
-      print('Lỗi khởi tạo thông báo: $e');
+      print('NotificationService: Lỗi FCM permission (Bỏ qua): $e');
     }
-
-    // 3. Xử lý khi app đang mở và nhận tin (Foreground từ FCM)
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      if (message.notification != null) {
-        _showDynamicNotification(
-          message.notification!.title ?? 'Thông báo',
-          message.notification!.body ?? '',
-        );
-      }
-    });
-
-    // 4. LẮNG NGHE THÔNG BÁO TỪ FIRESTORE (DO ADMIN GỬI)
-    _listenToFirestoreNotifications();
   }
 
-  bool _isInitialLoad = true;
-
   void _listenToFirestoreNotifications() {
-    print('Thông báo: Bắt đầu lắng nghe Firestore...');
+    print('NotificationService: Bắt đầu lắng nghe Firestore...');
     
-    FirebaseFirestore.instance
+    _notificationSubscription = FirebaseFirestore.instance
         .collection('notifications')
         .orderBy('sentAt', descending: true)
-        .limit(5) // Chỉ lấy 5 tin gần nhất để tiết kiệm dữ liệu
+        .limit(1)
         .snapshots()
         .listen((snapshot) {
       
-      // Nếu là lần đầu tiên nạp dữ liệu, chúng ta đánh dấu là "tin cũ" và bỏ qua
       if (_isInitialLoad) {
-        print('Thông báo: Đã nạp danh sách tin cũ, đang chờ tin mới...');
+        print('NotificationService: Đã bỏ qua tin cũ, đang đợi tin mới...');
         _isInitialLoad = false;
         return;
       }
 
       for (var change in snapshot.docChanges) {
-        // Chỉ hiện thông báo nếu đó là một tài liệu MỚI được thêm vào
         if (change.type == DocumentChangeType.added) {
           final data = change.doc.data();
           if (data != null) {
-            print('Thông báo: Nhận được tin mới từ Admin: ${data['title']}');
+            print('NotificationService: NHẬN TIN MỚI -> ${data['title']}');
             _showDynamicNotification(
-              data['title'] ?? 'Thông báo từ Admin',
+              data['title'] ?? 'Thông báo',
               data['body'] ?? '',
             );
           }
         }
       }
     }, onError: (error) {
-      print('Lỗi lắng nghe Firestore: $error');
+      print('NotificationService: LỖI FIRESTORE -> $error');
     });
   }
 
   void _showDynamicNotification(String title, String message) {
-    if (navigatorKey.currentContext != null) {
+    final state = navigatorKey.currentState;
+    if (state != null && state.overlay != null) {
       DynamicIslandNotification.show(
-        navigatorKey.currentContext!,
+        state.context, // Vẫn truyền context nhưng sẽ dùng overlayState làm ưu tiên
         title: title,
         message: message,
         type: NotificationType.info,
+        overlayState: state.overlay, // Truyền trực tiếp OverlayState
       );
+    } else {
+      print('NotificationService: LỖI -> Không tìm thấy OverlayState của Navigator');
     }
   }
 
-  // Hàm để subscribe/unsubscribe dựa trên trạng thái học tập
   Future<void> updateStreakStatus(int streak) async {
     try {
       if (streak == 0) {
@@ -98,7 +94,7 @@ class NotificationService {
         await _fcm.unsubscribeFromTopic('inactive_users');
       }
     } catch (e) {
-      print('FCM Topic error: $e');
+      print('NotificationService: Lỗi FCM Topic -> $e');
     }
   }
 }

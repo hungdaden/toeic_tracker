@@ -10,6 +10,7 @@ import '../models/user_model.dart';
 import '../models/toeic_score.dart';
 import '../models/mun_ai_chat.dart';
 import '../models/group_model.dart';
+import '../services/notification_service.dart';
 
 class UserProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -61,6 +62,8 @@ class UserProvider with ChangeNotifier {
       _isLoading = true;
       notifyListeners();
       _initAndListen();
+      // KHỞI TẠO THÔNG BÁO SAU KHI ĐÃ CÓ AUTH UID
+      NotificationService().init();
     } else {
       _isLoading = false;
       notifyListeners();
