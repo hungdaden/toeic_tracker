@@ -1,4 +1,5 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../widgets/dynamic_island_notification.dart';
 import '../main.dart'; // Để lấy navigatorKey
@@ -26,30 +27,64 @@ class NotificationService {
       print('Lỗi khởi tạo thông báo: $e');
     }
 
-    // 3. Xử lý khi app đang mở và nhận tin (Foreground)
+    // 3. Xử lý khi app đang mở và nhận tin (Foreground từ FCM)
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('Nhận thông báo Foreground: ${message.notification?.title}');
-      
-      // HIỂN THỊ DYNAMIC ISLAND NGAY LẬP TỨC
-      if (message.notification != null && navigatorKey.currentContext != null) {
-        DynamicIslandNotification.show(
-          navigatorKey.currentContext!,
-          title: message.notification!.title ?? 'Thông báo mới',
-          message: message.notification!.body ?? '',
-          type: NotificationType.info,
+      if (message.notification != null) {
+        _showDynamicNotification(
+          message.notification!.title ?? 'Thông báo',
+          message.notification!.body ?? '',
         );
+      }
+    });
+
+    // 4. LẮNG NGHE THÔNG BÁO TỪ FIRESTORE (DO ADMIN GỬI)
+    _listenToFirestoreNotifications();
+  }
+
+  void _listenToFirestoreNotifications() {
+    // Chỉ lấy các thông báo mới được tạo sau thời điểm app mở
+    final startTime = DateTime.now();
+    
+    FirebaseFirestore.instance
+        .collection('notifications')
+        .where('sentAt', isGreaterThan: startTime) // Dùng sentAt đồng bộ với Admin
+        .snapshots()
+        .listen((snapshot) {
+      for (var change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          final data = change.doc.data();
+          if (data != null) {
+            _showDynamicNotification(
+              data['title'] ?? 'Thông báo từ Admin',
+              data['body'] ?? '', // Dùng body đồng bộ với Admin
+            );
+          }
+        }
       }
     });
   }
 
+  void _showDynamicNotification(String title, String message) {
+    if (navigatorKey.currentContext != null) {
+      DynamicIslandNotification.show(
+        navigatorKey.currentContext!,
+        title: title,
+        message: message,
+        type: NotificationType.info,
+      );
+    }
+  }
+
   // Hàm để subscribe/unsubscribe dựa trên trạng thái học tập
   Future<void> updateStreakStatus(int streak) async {
-    if (streak == 0) {
-      await _fcm.subscribeToTopic('inactive_users');
-      print('Subscribed to inactive_users topic');
-    } else {
-      await _fcm.unsubscribeFromTopic('inactive_users');
-      print('Unsubscribed from inactive_users topic');
+    try {
+      if (streak == 0) {
+        await _fcm.subscribeToTopic('inactive_users');
+      } else {
+        await _fcm.unsubscribeFromTopic('inactive_users');
+      }
+    } catch (e) {
+      print('FCM Topic error: $e');
     }
   }
 }
