@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../models/user_model.dart';
 import '../models/toeic_score.dart';
 import 'login_screen.dart';
+import '../widgets/notification_bell.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -67,7 +68,12 @@ class HomeScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tổng Quan Học Tập')),
+      appBar: AppBar(
+        title: const Text('Tổng Quan Học Tập'),
+        actions: const [
+          NotificationBell(),
+        ],
+      ),
       body: Consumer<UserProvider>(
         builder: (context, provider, child) {
           final currentUser = provider.currentUser;

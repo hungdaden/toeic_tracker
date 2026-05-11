@@ -9,6 +9,7 @@ import 'providers/user_provider.dart';
 import 'providers/auth_provider.dart';
 import 'screens/main_screen.dart';
 import 'screens/maintenance_screen.dart';
+import 'widgets/dynamic_island_notification.dart';
 import 'theme/app_theme.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -18,6 +19,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: "assets/.env");
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
+  // Kích hoạt bộ nhớ đệm Local (Cache) để tiết kiệm băng thông
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true, // Kích hoạt trên Web/Mobile
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED, // Không giới hạn kích thước cache
+  );
   
   runApp(
     MultiProvider(
@@ -35,8 +42,61 @@ void main() async {
   );
 }
 
-class ToeicTrackerApp extends StatelessWidget {
+class ToeicTrackerApp extends StatefulWidget {
   const ToeicTrackerApp({super.key});
+
+  @override
+  State<ToeicTrackerApp> createState() => _ToeicTrackerAppState();
+}
+
+class _ToeicTrackerAppState extends State<ToeicTrackerApp> {
+  bool _isMaintenance = false;
+  bool _isFirstLoad = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenMaintenanceMode();
+  }
+
+  void _listenMaintenanceMode() {
+    FirebaseFirestore.instance
+        .collection('config')
+        .doc('system')
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.exists) {
+        final data = snapshot.data() as Map<String, dynamic>;
+        final newStatus = data['maintenanceMode'] == true;
+
+        // Nếu Admin vừa bật bảo trì (Status đổi từ false sang true)
+        if (newStatus && !_isMaintenance && !_isFirstLoad) {
+          _showMaintenanceNotification();
+        }
+
+        if (mounted) {
+          setState(() {
+            _isMaintenance = newStatus;
+            _isFirstLoad = false;
+          });
+        }
+      }
+    });
+  }
+
+  void _showMaintenanceNotification() {
+    // Đợi 1 chút để Navigator sẵn sàng
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (navigatorKey.currentState?.overlay?.context != null) {
+        DynamicIslandNotification.show(
+          navigatorKey.currentState!.overlay!.context,
+          title: 'Hệ thống Bảo trì',
+          message: 'Admin vừa kích hoạt chế độ bảo trì định kỳ.',
+          type: NotificationType.warning,
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,18 +105,7 @@ class ToeicTrackerApp extends StatelessWidget {
       title: 'TOEIC Tracker',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance.collection('config').doc('system').snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasData && snapshot.data!.exists) {
-            final data = snapshot.data!.data() as Map<String, dynamic>;
-            if (data['maintenanceMode'] == true) {
-              return const MaintenanceScreen();
-            }
-          }
-          return const MainScreen();
-        },
-      ),
+      home: _isMaintenance ? const MaintenanceScreen() : const MainScreen(),
     );
   }
 }

@@ -12,6 +12,7 @@ import 'learning_path_screen.dart';
 import '../models/toeic_score.dart';
 import '../widgets/dynamic_island_notification.dart';
 import 'exam_list_screen.dart';
+import '../widgets/notification_bell.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -113,6 +114,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ],
             ),
+            actions: const [
+              NotificationBell(),
+            ],
           ),
           body: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
