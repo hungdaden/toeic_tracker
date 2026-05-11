@@ -47,11 +47,11 @@ class AuthProvider extends ChangeNotifier {
       UserCredential result = await _auth.signInWithEmailAndPassword(email: email, password: password);
       
       if (result.user != null) {
-        // KIỂM TRA TÀI KHOẢN CÓ BỊ KHÓA KHÔNG
+        // KIỂM TRA TÀI KHOẢN CÓ BỊ KHÓA KHÔNG (Ép buộc lấy từ Server để tránh Cache cũ)
         final userDoc = await FirebaseFirestore.instance
             .collection('users')
             .where('authUid', isEqualTo: result.user!.uid)
-            .get();
+            .get(const GetOptions(source: Source.server));
 
         if (userDoc.docs.isNotEmpty) {
           final userData = userDoc.docs.first.data();

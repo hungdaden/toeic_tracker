@@ -85,10 +85,16 @@ class UserProvider with ChangeNotifier {
         _users = snapshot.docs.map((doc) => UserModel.fromJson(doc.data() as Map<String, dynamic>)).toList();
         
         // KIỂM TRA TÀI KHOẢN BỊ KHÓA
-        // Nếu bất kỳ hồ sơ nào của User này bị Admin khóa, chúng ta sẽ đăng xuất toàn bộ
+        // Chỉ xử lý nếu dữ liệu là mới nhất từ Server hoặc nếu đã chắc chắn bị khóa trong Cache
         if (_users.any((u) => u.isDisabled)) {
-          _handleDisabledUser();
-          return;
+          // Nếu dữ liệu này lấy từ Cache, chúng ta tạm thời bỏ qua để đợi Server cập nhật trạng thái mới nhất
+          // (Tránh trường hợp vừa được Admin mở khóa nhưng Cache máy vẫn báo là bị khóa)
+          if (snapshot.metadata.isFromCache) {
+             debugPrint('Phát hiện trạng thái isDisabled trong Cache, đang đợi Server xác nhận...');
+          } else {
+            _handleDisabledUser();
+            return;
+          }
         }
         
         if (_currentUser != null) {
