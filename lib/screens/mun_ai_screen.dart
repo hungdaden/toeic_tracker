@@ -39,10 +39,10 @@ class _MunAIScreenState extends State<MunAIScreen> {
   Future<void> _loadAIConfig() async {
     try {
       final doc = await FirebaseFirestore.instance.collection('config').doc('system').get();
-      String modelName = 'gemini-1.5-pro';
+      String modelName = 'gemini-2.0-flash';
       if (doc.exists) {
         final data = doc.data()!;
-        modelName = data['aiModel'] ?? 'gemini-1.5-pro';
+        modelName = data['aiModel'] ?? 'gemini-2.0-flash';
         _systemPrompt = data['aiSystemPrompt'] ?? _systemPrompt;
       }
       
@@ -51,7 +51,7 @@ class _MunAIScreenState extends State<MunAIScreen> {
       });
     } catch (e) {
       setState(() {
-        _model = GenerativeModel(model: 'gemini-1.5-pro', apiKey: _apiKey);
+        _model = GenerativeModel(model: 'gemini-2.0-flash', apiKey: _apiKey);
       });
     }
   }
