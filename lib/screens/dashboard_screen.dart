@@ -1,4 +1,5 @@
 import 'package:flutter/rendering.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -139,8 +140,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Expanded(
                   child: ListView.builder(
                     controller: _scrollController,
-                    itemCount: currentUser.scores.length,
+                    itemCount: currentUser.scores.length + 1, // Thêm 1 row cho Support
                     itemBuilder: (context, index) {
+                      if (index == currentUser.scores.length) {
+                        // HIỂN THỊ THÔNG TIN HỖ TRỢ Ở CUỐI DANH SÁCH
+                        return StreamBuilder<DocumentSnapshot>(
+                          stream: FirebaseFirestore.instance.collection('config').doc('system').snapshots(),
+                          builder: (context, configSnapshot) {
+                            String zalo = '...';
+                            if (configSnapshot.hasData && configSnapshot.data!.exists) {
+                              zalo = (configSnapshot.data!.data() as Map<String, dynamic>)['supportZalo'] ?? '';
+                            }
+                            if (zalo.isEmpty) return const SizedBox(height: 100);
+
+                            return Container(
+                              margin: const EdgeInsets.all(16),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.white10),
+                              ),
+                              child: Column(
+                                children: [
+                                  const Icon(Icons.help_outline_rounded, color: Colors.grey, size: 24),
+                                  const SizedBox(height: 8),
+                                  const Text('Bạn gặp vấn đề gì? Liên hệ quản trị viên qua Zalo:', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                  const SizedBox(height: 4),
+                                  Text(zalo, style: const TextStyle(color: Colors.indigoAccent, fontWeight: FontWeight.bold, fontSize: 16)),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      }
+
                       final score = currentUser.scores[index];
                       return Slidable(
                         key: Key(score.id),

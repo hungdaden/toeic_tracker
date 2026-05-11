@@ -4,6 +4,7 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/user_provider.dart';
 import '../models/mun_ai_chat.dart';
 
@@ -17,7 +18,8 @@ class MunAIScreen extends StatefulWidget {
 class _MunAIScreenState extends State<MunAIScreen> {
   final TextEditingController _controller = TextEditingController();
   bool _isLoading = false;
-  late GenerativeModel _model;
+  GenerativeModel? _model;
+  String _systemPrompt = 'Bạn là Mun AI, trợ lý học tập TOEIC. Hãy trả lời chuyên nghiệp và hữu ích.';
   final ScrollController _scrollController = ScrollController();
 
   MunAIChatSession? _currentSession;
@@ -28,10 +30,30 @@ class _MunAIScreenState extends State<MunAIScreen> {
   @override
   void initState() {
     super.initState();
-    _model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: _apiKey);
+    _loadAIConfig();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initOrLoadLastSession();
     });
+  }
+
+  Future<void> _loadAIConfig() async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('config').doc('system').get();
+      String modelName = 'gemini-1.5-pro';
+      if (doc.exists) {
+        final data = doc.data()!;
+        modelName = data['aiModel'] ?? 'gemini-1.5-pro';
+        _systemPrompt = data['aiSystemPrompt'] ?? _systemPrompt;
+      }
+      
+      setState(() {
+        _model = GenerativeModel(model: modelName, apiKey: _apiKey);
+      });
+    } catch (e) {
+      setState(() {
+        _model = GenerativeModel(model: 'gemini-1.5-pro', apiKey: _apiKey);
+      });
+    }
   }
 
   void _initOrLoadLastSession() {
@@ -50,8 +72,7 @@ class _MunAIScreenState extends State<MunAIScreen> {
         messages: [
           MunAIChatMessage(
             role: 'model',
-            text:
-                'Chào bạn! Mình là Mun AI. Mình có thể giúp bạn phân tích điểm số và đưa ra lời khuyên học tập TOEIC. Bạn muốn hỏi gì về kết quả của mình không?',
+            text: 'Chào bạn! Mình là Mun AI. Mình đã sẵn sàng hỗ trợ bạn học TOEIC rồi đây!',
           ),
         ],
       );
@@ -61,7 +82,7 @@ class _MunAIScreenState extends State<MunAIScreen> {
   void _loadSession(MunAIChatSession session) {
     setState(() {
       _currentSession = session;
-      _isSidebarOpen = false; // Đóng sidebar khi chọn
+      _isSidebarOpen = false;
     });
     _scrollToBottom();
   }
@@ -78,68 +99,9 @@ class _MunAIScreenState extends State<MunAIScreen> {
     });
   }
 
-  Future<void> _generateTitleForSession(String firstMessage) async {
-    try {
-      final prompt =
-          "Tóm tắt tin nhắn sau thành một tiêu đề cực kỳ ngắn gọn (không quá 5 chữ). "
-          "QUAN TRỌNG: CHỈ TRẢ VỀ TIÊU ĐỀ, TUYỆT ĐỐI KHÔNG TRẢ VỀ SUY NGHĨ (THOUGHT) HAY GIẢI THÍCH.\n"
-          "Tin nhắn: $firstMessage";
-      final response = await _model.generateContent([Content.text(prompt)]);
-      String? title = response.text;
-      
-      if (title != null && title.isNotEmpty) {
-        // Loại bỏ phần suy nghĩ (think) nếu có (thường gặp ở các model như DeepSeek-R1 hoặc Gemini CoT)
-        if (title.contains('</think>')) {
-          title = title.split('</think>').last;
-        } else if (title.toLowerCase().startsWith('think:')) {
-          // Xử lý trường hợp output có dạng "Think: ... \n\n Tiêu đề"
-          final parts = title.split('\n\n');
-          if (parts.length > 1) {
-            title = parts.last;
-          } else {
-            title = title.replaceFirst(RegExp(r'think:.*', caseSensitive: false, dotAll: true), '');
-          }
-        }
-
-        title = title.trim().replaceAll('"', '');
-        if (title.isEmpty) title = "Cuộc trò chuyện";
-
-        setState(() {
-          _currentSession!.title = title!;
-        });
-        if (!mounted) return;
-        context.read<UserProvider>().saveChatSession(_currentSession!);
-      }
-    } catch (e) {
-      debugPrint("Lỗi tạo tiêu đề: $e");
-    }
-  }
-
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();
-    if (text.isEmpty || _isLoading || _currentSession == null) return;
-
-    if (_apiKey == 'YOUR_GEMINI_API_KEY' || _apiKey.isEmpty) {
-      setState(() {
-        _currentSession!.messages.add(
-          MunAIChatMessage(role: 'user', text: text),
-        );
-        _currentSession!.messages.add(
-          MunAIChatMessage(
-            role: 'model',
-            text:
-                'Vui lòng cấu hình Gemini API Key trong thư mục assets/.env để bắt đầu chat nhé!',
-          ),
-        );
-      });
-      _controller.clear();
-      _scrollToBottom();
-      return;
-    }
-
-    bool isFirstUserMessage = _currentSession!.messages
-        .where((m) => m.role == 'user')
-        .isEmpty;
+    if (text.isEmpty || _isLoading || _currentSession == null || _model == null) return;
 
     setState(() {
       _currentSession!.messages.add(MunAIChatMessage(role: 'user', text: text));
@@ -148,55 +110,29 @@ class _MunAIScreenState extends State<MunAIScreen> {
     _controller.clear();
     _scrollToBottom();
 
-    // Lưu phiên chat ngay khi có thay đổi
-    context.read<UserProvider>().saveChatSession(_currentSession!);
-
     try {
       final userProvider = context.read<UserProvider>();
       final currentUser = userProvider.currentUser;
 
-      String contextPromt = "";
-      // Nếu là câu hỏi đầu tiên, nhồi thêm Context vào hệ thống
-      if (isFirstUserMessage) {
-        contextPromt = """
-BẠN LÀ MUN AI - CHUYÊN GIA TƯ VẤN TOEIC.
-HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA NGƯỜI DÙNG:
-""";
-        if (currentUser != null) {
-          contextPromt += "1. Tên người dùng: ${currentUser.name}\n";
-          contextPromt += "2. Mục tiêu điểm số: ${currentUser.targetScore}\n";
-          if (currentUser.scores.isNotEmpty) {
-            contextPromt += "3. Lịch sử bài thi gần nhất:\n";
-            for (var s in currentUser.scores.take(10)) {
-              contextPromt +=
-                  "   - Ngày ${DateFormat('dd/MM/yyyy').format(s.date)}: Listening: ${s.listeningScore}, Reading: ${s.readingScore}, Tổng: ${s.calculateTotal(currentUser.isFourSkills)}\n";
-            }
-            contextPromt += "\nNHIỆM VỤ CỦA BẠN:";
-            contextPromt +=
-                "\n- Thông báo rằng, bạn được cấp quyền để được truy cập kết quả của 10 bài thi gần nhất.";
-            contextPromt += "\n- Hỏi lại người dùng những yêu cầu sau đây: ";
-            contextPromt +=
-                "\n- 1. Phân tích sự tiến bộ hoặc sa sút dựa trên lịch sử điểm số.";
-            contextPromt +=
-                "\n- 2. Dựa vào mục tiêu để đưa ra lộ trình cụ thể.";
-            contextPromt +=
-                "\n- 3. TUYỆT ĐỐI KHÔNG được trả lời rằng bạn không có quyền truy cập dữ liệu.";
-          } else {
-            contextPromt += "4. Người dùng này chưa có dữ liệu điểm số nào.\n";
-          }
+      String contextPromt = "SYSTEM PROMPT: $_systemPrompt\n\n";
+      
+      if (currentUser != null) {
+        contextPromt += "DỮ LIỆU NGƯỜI DÙNG:\n";
+        contextPromt += "- Tên: ${currentUser.name}\n";
+        contextPromt += "- Mục tiêu: ${currentUser.targetScore}\n";
+        if (currentUser.scores.isNotEmpty) {
+          contextPromt += "- Lịch sử thi: ${currentUser.scores.length} bài thi gần nhất.\n";
         }
-        contextPromt += "\nCâu hỏi của người dùng: $text";
-      } else {
-        contextPromt = text;
       }
+      
+      contextPromt += "\nCâu hỏi người dùng: $text";
 
-      // Format lại lịch sử ngoại trừ tin nhắn người dùng vừa gửi
       List<Content> history = _currentSession!.messages
           .take(_currentSession!.messages.length - 1)
           .map((m) => Content(m.role, [TextPart(m.text)]))
           .toList();
 
-      final chat = _model.startChat(history: history);
+      final chat = _model!.startChat(history: history);
       final response = await chat.sendMessage(Content.text(contextPromt));
 
       setState(() {
@@ -209,21 +145,11 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
         _isLoading = false;
       });
 
-      // Lưu lại sau khi AI trả lời
       context.read<UserProvider>().saveChatSession(_currentSession!);
-
-      // Yêu cầu AI tóm tắt Title nếu là tin nhắn đầu tiên
-      if (isFirstUserMessage) {
-        _generateTitleForSession(text);
-      }
     } catch (e) {
-      debugPrint('Mun AI Error Details: $e');
       setState(() {
         _currentSession!.messages.add(
-          MunAIChatMessage(
-            role: 'model',
-            text: 'Đã có lỗi xảy ra từ máy chủ Gemini: $e',
-          ),
+          MunAIChatMessage(role: 'model', text: 'Đã có lỗi xảy ra: $e'),
         );
         _isLoading = false;
       });
@@ -231,112 +157,9 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
     _scrollToBottom();
   }
 
-  void _deleteSession(String sessionId) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Xóa cuộc trò chuyện?'),
-        content: const Text(
-          'Bạn có chắc chắn muốn xóa đoạn chat này không? Dữ liệu không thể khôi phục.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.read<UserProvider>().deleteChatSession(sessionId);
-
-              if (_currentSession?.id == sessionId) {
-                final userProvider = context.read<UserProvider>();
-                final history = userProvider.currentUser?.chatHistory ?? [];
-                final remaining = history
-                    .where((s) => s.id != sessionId)
-                    .toList();
-
-                if (remaining.isNotEmpty) {
-                  _loadSession(remaining.first);
-                } else {
-                  _createNewSession();
-                }
-              }
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Xóa'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSidebarContent() {
-    final userProvider = context.watch<UserProvider>();
-    final history = userProvider.currentUser?.chatHistory ?? [];
-
-    return Column(
-      children: [
-        SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.add),
-              label: const Text('Chat Mới'),
-              onPressed: _createNewSession,
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(45),
-              ),
-            ),
-          ),
-        ),
-        const Divider(),
-        Expanded(
-          child: ListView.builder(
-            itemCount: history.length,
-            itemBuilder: (context, index) {
-              final session = history[index];
-              final isSelected = session.id == _currentSession?.id;
-              return ListTile(
-                selected: isSelected,
-                selectedTileColor: Theme.of(
-                  context,
-                ).colorScheme.primary.withOpacity(0.1),
-                leading: const Icon(Icons.chat_bubble_outline),
-                title: Text(
-                  session.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: isSelected
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                  ),
-                ),
-                subtitle: Text(
-                  DateFormat('dd/MM HH:mm').format(session.createdAt),
-                  style: const TextStyle(fontSize: 12),
-                ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 20),
-                  color: Colors.redAccent,
-                  onPressed: () => _deleteSession(session.id),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-                onTap: () => _loadSession(session),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (_currentSession == null) {
+    if (_currentSession == null || _model == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
@@ -351,22 +174,17 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
       ),
       body: Row(
         children: [
-          // Giao diện Sidebar thò thụt
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOutCubic,
             width: _isSidebarOpen ? 250 : 0,
             child: ClipRect(
               child: Container(
                 width: 250,
-                color: Theme.of(
-                  context,
-                ).colorScheme.surfaceVariant.withOpacity(0.2),
+                color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
                 child: _buildSidebarContent(),
               ),
             ),
           ),
-          // Khung Chat chính
           Expanded(
             child: Column(
               children: [
@@ -379,39 +197,23 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
                       final msg = _currentSession!.messages[index];
                       final isUser = msg.role == 'user';
                       return Align(
-                        alignment: isUser
-                            ? Alignment.centerRight
-                            : Alignment.centerLeft,
+                        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
                         child: Container(
                           margin: const EdgeInsets.symmetric(vertical: 4),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           decoration: BoxDecoration(
                             color: isUser
                                 ? Theme.of(context).colorScheme.primary
                                 : Theme.of(context).colorScheme.surfaceVariant,
-                            borderRadius: BorderRadius.circular(20).copyWith(
-                              bottomRight: isUser
-                                  ? const Radius.circular(0)
-                                  : null,
-                              bottomLeft: !isUser
-                                  ? const Radius.circular(0)
-                                  : null,
-                            ),
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                          constraints: BoxConstraints(
-                            maxWidth: MediaQuery.of(context).size.width * 0.75,
-                          ),
+                          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
                           child: Text(
                             msg.text,
                             style: TextStyle(
                               color: isUser
                                   ? Theme.of(context).colorScheme.onPrimary
-                                  : Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
+                                  : Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -425,12 +227,7 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
                     child: SpinKitThreeBounce(color: Colors.white, size: 20),
                   ),
                 Padding(
-                  padding: const EdgeInsets.only(
-                    left: 8.0,
-                    right: 8.0,
-                    top: 8.0,
-                    bottom: 32.0,
-                  ), // Nâng khung chat lên cao hơn để không bị Mèo Mun che
+                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 32),
                   child: Row(
                     children: [
                       Expanded(
@@ -438,12 +235,8 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
                           controller: _controller,
                           decoration: InputDecoration(
                             hintText: 'Hỏi Mun AI...',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                            ),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(25)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20),
                           ),
                           onSubmitted: (_) => _sendMessage(),
                         ),
@@ -461,6 +254,41 @@ HỆ THỐNG ĐÃ CẤP QUYỀN CHO BẠN TRUY CẬP DỮ LIỆU SAU ĐÂY CỦA
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSidebarContent() {
+    final userProvider = context.watch<UserProvider>();
+    final history = userProvider.currentUser?.chatHistory ?? [];
+
+    return Column(
+      children: [
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.add),
+              label: const Text('Chat Mới'),
+              onPressed: _createNewSession,
+              style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(45)),
+            ),
+          ),
+        ),
+        const Divider(),
+        Expanded(
+          child: ListView.builder(
+            itemCount: history.length,
+            itemBuilder: (context, index) {
+              final session = history[index];
+              return ListTile(
+                title: Text(session.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                subtitle: Text(DateFormat('dd/MM HH:mm').format(session.createdAt), style: const TextStyle(fontSize: 12)),
+                onTap: () => _loadSession(session),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

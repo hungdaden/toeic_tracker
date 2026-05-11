@@ -38,6 +38,12 @@ class AuthProvider extends ChangeNotifier {
   Future<String?> signInWithEmail(String email, String password) async {
     _setLoading(true);
     try {
+      // 1. KIỂM TRA CHẾ ĐỘ BẢO TRÌ
+      final configDoc = await FirebaseFirestore.instance.collection('config').doc('system').get();
+      if (configDoc.exists && (configDoc.data() as Map<String, dynamic>)['maintenanceMode'] == true) {
+        return "Hệ thống đang bảo trì để nâng cấp. Vui lòng quay lại sau ít phút.";
+      }
+
       UserCredential result = await _auth.signInWithEmailAndPassword(email: email, password: password);
       
       if (result.user != null) {
@@ -85,6 +91,12 @@ class AuthProvider extends ChangeNotifier {
   Future<String?> signInWithGoogle() async {
     _setLoading(true);
     try {
+      // 1. KIỂM TRA CHẾ ĐỘ BẢO TRÌ
+      final configDoc = await FirebaseFirestore.instance.collection('config').doc('system').get();
+      if (configDoc.exists && (configDoc.data() as Map<String, dynamic>)['maintenanceMode'] == true) {
+        return "Hệ thống đang bảo trì để nâng cấp. Vui lòng quay lại sau ít phút.";
+      }
+
       if (kIsWeb) {
         // Trên Web, sử dụng phương thức signInWithPopup tích hợp sẵn của Firebase
         GoogleAuthProvider googleProvider = GoogleAuthProvider();

@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
 import 'providers/user_provider.dart';
 import 'providers/auth_provider.dart';
 import 'screens/main_screen.dart';
+import 'screens/maintenance_screen.dart';
 import 'theme/app_theme.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,10 +38,22 @@ class ToeicTrackerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'TOEIC Tracker',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const MainScreen(),
+      home: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance.collection('config').doc('system').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData && snapshot.data!.exists) {
+            final data = snapshot.data!.data() as Map<String, dynamic>;
+            if (data['maintenanceMode'] == true) {
+              return const MaintenanceScreen();
+            }
+          }
+          return const MainScreen();
+        },
+      ),
     );
   }
 }
