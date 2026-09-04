@@ -1,13 +1,14 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:may_uikit/may_uikit.dart';
 import '../providers/user_provider.dart';
 import '../providers/auth_provider.dart';
 import '../models/user_model.dart';
 import '../models/toeic_score.dart';
 import 'login_screen.dart';
 import '../widgets/notification_bell.dart';
+import '../theme/liquid_glass_theme.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -17,64 +18,90 @@ class HomeScreen extends StatelessWidget {
     final authProvider = context.watch<AuthProvider>();
 
     if (!authProvider.isAuthenticated) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('TOEIC Tracker')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.school_rounded,
-                  size: 100,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Chào mừng bạn đến với TOEIC Tracker!',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Vui lòng đăng nhập để lưu trữ hồ sơ học tập, đồng bộ dữ liệu và sử dụng trợ lý Mun AI.',
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 40),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    );
-                  },
-                  icon: const Icon(Icons.login),
-                  label: const Text('Đăng nhập ngay'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 16,
+      return LiquidGlassScaffoldWrapper(
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: LiquidGlassContainer(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            LiquidGlassTheme.primaryAccent.withValues(alpha: 0.3),
+                            LiquidGlassTheme.secondaryAccent.withValues(alpha: 0.1),
+                          ],
+                        ),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.school_rounded,
+                          size: 48,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
-                    textStyle: const TextStyle(fontSize: 18),
-                  ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Chào mừng bạn đến với\nTOEIC Tracker!',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: -0.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Vui lòng đăng nhập để lưu trữ hồ sơ học tập, đồng bộ dữ liệu và sử dụng trợ lý Mun AI.',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.white.withValues(alpha: 0.65),
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 32),
+                    GlassButtonV2(
+                      title: 'Đăng nhập ngay',
+                      icon: const Icon(Icons.login_rounded, size: 20, color: Colors.white),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        );
+                      },
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
       );
     }
 
-    return Scaffold(
+    return LiquidGlassScaffoldWrapper(
       appBar: AppBar(
         title: const Text('Tổng Quan Học Tập'),
         actions: const [
           NotificationBell(),
+          SizedBox(width: 8),
         ],
       ),
-      body: Consumer<UserProvider>(
+      child: Consumer<UserProvider>(
         builder: (context, provider, child) {
           final currentUser = provider.currentUser;
           final localUsers = provider.users;
@@ -82,46 +109,70 @@ class HomeScreen extends StatelessWidget {
           final isInGroup = currentUser?.groupId != null && currentUser!.groupId!.isNotEmpty;
 
           if (localUsers.isEmpty) {
-            return const Center(
-              child: Text(
-                'Chưa có hồ sơ nào. Hãy tạo một hồ sơ mới ở mục "Hồ sơ".',
-                style: TextStyle(color: Colors.grey),
+            return Center(
+              child: LiquidGlassContainer(
+                margin: const EdgeInsets.all(24),
+                child: Text(
+                  'Chưa có hồ sơ nào. Hãy tạo một hồ sơ mới ở mục "Hồ sơ".',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+                  textAlign: TextAlign.center,
+                ),
               ),
             );
           }
 
-          // Kết hợp danh sách: hiện hồ sơ cục bộ trước, sau đó là các thành viên nhóm khác (nếu có)
           List<UserModel> displayList = List.from(localUsers);
           if (isInGroup) {
-            // Lọc ra những người trong nhóm nhưng không thuộc tài khoản cục bộ (đã có trong localUsers)
             final otherMembers = groupMembers.where((m) => !localUsers.any((lu) => lu.id == m.id)).toList();
             displayList.addAll(otherMembers);
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: displayList.length,
-            itemBuilder: (context, index) {
-              final user = displayList[index];
-              final isLocal = localUsers.any((lu) => lu.id == user.id);
-              
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (index == 0) 
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 8.0),
-                      child: Text('Hồ sơ của bạn', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                    ),
-                  if (isInGroup && index == localUsers.length)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8.0, bottom: 8.0),
-                      child: Text('Thành viên khác trong nhóm', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                    ),
-                  _UserCard(user: user, isLocal: isLocal),
-                ],
-              );
-            },
+          final scrollController = ScrollController();
+
+          return CommonScrollbarWithIosStatusBarTapDetectorV2(
+            controller: scrollController,
+            child: ListView.builder(
+              controller: scrollController,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+              itemCount: displayList.length,
+              itemBuilder: (context, index) {
+                final user = displayList[index];
+                final isLocal = localUsers.any((lu) => lu.id == user.id);
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (index == 0)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4, bottom: 10),
+                        child: Text(
+                          'HỒ SƠ CỦA BẠN',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                            letterSpacing: 1.1,
+                            color: Colors.white.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ),
+                    if (isInGroup && index == localUsers.length)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4, top: 16, bottom: 10),
+                        child: Text(
+                          'THÀNH VIÊN TRONG NHÓM',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                            letterSpacing: 1.1,
+                            color: Colors.white.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ),
+                    _LiquidUserCard(user: user, isLocal: isLocal),
+                  ],
+                );
+              },
+            ),
           );
         },
       ),
@@ -129,17 +180,17 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _UserCard extends StatefulWidget {
+class _LiquidUserCard extends StatefulWidget {
   final UserModel user;
   final bool isLocal;
 
-  const _UserCard({super.key, required this.user, required this.isLocal});
+  const _LiquidUserCard({required this.user, required this.isLocal});
 
   @override
-  State<_UserCard> createState() => _UserCardState();
+  State<_LiquidUserCard> createState() => _LiquidUserCardState();
 }
 
-class _UserCardState extends State<_UserCard> {
+class _LiquidUserCardState extends State<_LiquidUserCard> {
   bool _isExpanded = false;
 
   @override
@@ -151,228 +202,294 @@ class _UserCardState extends State<_UserCard> {
 
     final displayScores = _isExpanded ? scores : scores.take(3).toList();
 
-    return Card(
-      elevation: 4,
+    return PressableCardContainerV2(
       margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundImage: user.avatarUrl != null
-                      ? NetworkImage(user.avatarUrl!)
-                      : null,
-                  child: user.avatarUrl == null
-                      ? Text(
-                          user.name.isNotEmpty
-                              ? user.name[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(fontSize: 24),
-                        )
-                      : null,
+      borderRadius: 24,
+      padding: const EdgeInsets.all(18),
+      color: Colors.white.withValues(alpha: 0.08),
+      borderColor: Colors.white.withValues(alpha: 0.15),
+      borderWidth: 1.0,
+      shadowColor: Colors.black.withValues(alpha: 0.3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: Avatar, Name, Streak & Group tags
+          Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      LiquidGlassTheme.primaryAccent.withValues(alpha: 0.6),
+                      LiquidGlassTheme.secondaryAccent.withValues(alpha: 0.4),
+                    ],
+                  ),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    width: 2.0,
+                  ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              user.name,
-                              style: const TextStyle(
-                                fontSize: 20,
+                child: ClipOval(
+                  child: user.avatarUrl != null
+                      ? Image.network(
+                          user.avatarUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => _buildAvatarFallback(user),
+                        )
+                      : _buildAvatarFallback(user),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            user.name,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: -0.3,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (!isLocal)
+                          Container(
+                            margin: const EdgeInsets.only(left: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: LiquidGlassTheme.secondaryAccent.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: LiquidGlassTheme.secondaryAccent.withValues(alpha: 0.4),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: const Text(
+                              'NHÓM',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: LiquidGlassTheme.secondaryAccent,
                                 fontWeight: FontWeight.bold,
                               ),
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          !isLocal 
-                            ? Container(
-                                margin: const EdgeInsets.only(left: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.blue, width: 0.5),
-                                ),
-                                child: const Text('NHÓM', style: TextStyle(fontSize: 10, color: Colors.blue, fontWeight: FontWeight.bold)),
-                              )
-                            : const SizedBox.shrink(),
-                          if (user.currentStreak >= 3)
-                            Container(
-                              margin: const EdgeInsets.only(left: 8),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.orange),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.local_fire_department,
-                                    color: Colors.orange,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${user.currentStreak}',
-                                    style: const TextStyle(
-                                      color: Colors.orange,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
+                        if (user.currentStreak >= 3)
+                          Container(
+                            margin: const EdgeInsets.only(left: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: LiquidGlassTheme.streakFire.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: LiquidGlassTheme.streakFire.withValues(alpha: 0.45),
+                                width: 0.8,
                               ),
                             ),
-                        ],
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.local_fire_department_rounded,
+                                  color: LiquidGlassTheme.streakFire,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '${user.currentStreak}',
+                                  style: const TextStyle(
+                                    color: LiquidGlassTheme.streakFire,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Ngày sinh: ${DateFormat('dd/MM/yyyy').format(user.dateOfBirth)}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.55),
                       ),
-                      Text(
-                        'Ngày sinh: ${DateFormat('dd/MM/yyyy').format(user.dateOfBirth)}',
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                    ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          // Divider
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Divider(
+              height: 1,
+              color: Colors.white.withValues(alpha: 0.08),
+            ),
+          ),
+
+          // Scores section
+          if (displayScores.isNotEmpty) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Điểm thi gần nhất',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  '${scores.length} bài thi',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.5),
                   ),
                 ),
               ],
             ),
-            const Divider(height: 32),
-            if (displayScores.isNotEmpty) ...[
-              const Text(
-                'Các điểm thi gần nhất:',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 8),
-              ...displayScores
-                  .map(
-                    (score) => Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.withOpacity(0.2)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Ngày thi: ${DateFormat('dd/MM/yyyy').format(score.date)}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            width: double.infinity,
-                            child: Wrap(
-                              alignment: WrapAlignment.spaceAround,
-                              spacing: 8,
-                              runSpacing: 12,
-                              children: [
-                              _buildScoreCard(
-                                'Listening',
-                                score.listeningScore,
-                                Colors.blue,
-                              ),
-                              _buildScoreCard(
-                                'Reading',
-                                score.readingScore,
-                                Colors.orange,
-                              ),
-                              if (user.isFourSkills) ...[
-                                _buildScoreCard(
-                                  'Speaking',
-                                  score.speakingScore ?? 0,
-                                  Colors.purple,
-                                ),
-                                _buildScoreCard(
-                                  'Writing',
-                                  score.writingScore ?? 0,
-                                  Colors.redAccent,
-                                ),
-                              ],
-                              _buildScoreCard(
-                                'Tổng',
-                                score.calculateTotal(user.isFourSkills),
-                                Colors.green,
-                              ),
-                            ],
-                          ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                  .toList(),
-              if (scores.length > 3)
-                Center(
-                  child: TextButton(
-                    onPressed: () {
+            const SizedBox(height: 10),
+            ...displayScores.map((score) => _buildScoreSession(score, user.isFourSkills)),
+            if (scores.length > 3)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: GlassButtonV2(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    title: _isExpanded ? 'Thu gọn' : 'Xem tất cả (${scores.length})',
+                    onTap: () {
                       setState(() {
                         _isExpanded = !_isExpanded;
                       });
                     },
-                    child: Text(
-                      _isExpanded ? 'Thu gọn' : 'Xem tất cả (${scores.length})',
-                    ),
-                  ),
-                ),
-            ] else ...[
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16.0),
-                  child: Text(
-                    'Chưa có dữ liệu điểm thi.',
-                    style: TextStyle(fontStyle: FontStyle.italic),
                   ),
                 ),
               ),
-            ],
+          ] else ...[
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 14.0),
+                child: Text(
+                  'Chưa có dữ liệu điểm thi.',
+                  style: TextStyle(
+                    fontStyle: FontStyle.italic,
+                    color: Colors.white.withValues(alpha: 0.45),
+                  ),
+                ),
+              ),
+            ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatarFallback(UserModel user) {
+    return Center(
+      child: Text(
+        user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+        style: const TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
         ),
       ),
     );
   }
 
-  Widget _buildScoreCard(String title, int score, Color defaultColor) {
-    // If it's not total score and is less than 300, make it red.
-    final color = (title != 'Tổng điểm' && score < 300)
-        ? Colors.red
-        : defaultColor;
+  Widget _buildScoreSession(ToeicScore score, bool isFourSkills) {
+    final total = score.calculateTotal(isFourSkills);
 
-    return Column(
-      children: [
-        Text(
-          title,
-          style: TextStyle(fontWeight: FontWeight.bold, color: color),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08),
+          width: 0.8,
         ),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                DateFormat('dd/MM/yyyy').format(score.date),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: Colors.white.withValues(alpha: 0.85),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: LiquidGlassTheme.scoreTotal.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: LiquidGlassTheme.scoreTotal.withValues(alpha: 0.4),
+                    width: 0.8,
+                  ),
+                ),
+                child: Text(
+                  'Tổng: $total',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: LiquidGlassTheme.scoreTotal,
+                  ),
+                ),
+              ),
+            ],
           ),
-          child: Text(
-            score.toString(),
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              LiquidGlassChip(
+                label: 'Nghe',
+                value: '${score.listeningScore}',
+                accentColor: LiquidGlassTheme.scoreListening,
+              ),
+              LiquidGlassChip(
+                label: 'Đọc',
+                value: '${score.readingScore}',
+                accentColor: LiquidGlassTheme.scoreReading,
+              ),
+              if (isFourSkills) ...[
+                LiquidGlassChip(
+                  label: 'Nói',
+                  value: '${score.speakingScore ?? 0}',
+                  accentColor: LiquidGlassTheme.scoreSpeaking,
+                ),
+                LiquidGlassChip(
+                  label: 'Viết',
+                  value: '${score.writingScore ?? 0}',
+                  accentColor: LiquidGlassTheme.scoreWriting,
+                ),
+              ],
+            ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

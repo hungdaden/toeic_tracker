@@ -1,18 +1,19 @@
 import 'package:flutter/rendering.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:confetti/confetti.dart';
-import '../providers/user_provider.dart';
 import 'package:intl/intl.dart';
+import 'package:may_uikit/may_uikit.dart';
+import '../providers/user_provider.dart';
 import 'add_score_screen.dart';
 import 'learning_path_screen.dart';
 import '../models/toeic_score.dart';
 import '../widgets/dynamic_island_notification.dart';
 import 'exam_list_screen.dart';
 import '../widgets/notification_bell.dart';
+import '../theme/liquid_glass_theme.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -78,12 +79,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (context, provider, child) {
         final currentUser = provider.currentUser;
         if (currentUser == null) {
-          return const Center(
-            child: Text('Vui lòng chọn hoặc tạo hồ sơ ở tab Hồ Sơ'),
+          return const LiquidGlassScaffoldWrapper(
+            child: Center(
+              child: Text(
+                'Vui lòng chọn hoặc tạo hồ sơ ở tab Hồ Sơ',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
           );
         }
 
-        // If _viewedScore is selected but gets deleted, we should clear it
         if (_viewedScore != null &&
             !currentUser.scores.any((s) => s.id == _viewedScore!.id)) {
           _viewedScore = null;
@@ -91,384 +96,401 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         final displayScore = _viewedScore ?? provider.latestScore;
 
-        return Scaffold(
+        return LiquidGlassScaffoldWrapper(
           appBar: AppBar(
             title: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundImage: currentUser.avatarUrl != null
-                      ? NetworkImage(currentUser.avatarUrl!)
-                      : null,
-                  child: currentUser.avatarUrl == null
-                      ? Text(
-                          currentUser.name[0],
-                          style: const TextStyle(fontSize: 12),
-                        )
-                      : null,
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: ClipOval(
+                    child: currentUser.avatarUrl != null
+                        ? Image.network(
+                            currentUser.avatarUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => _buildAvatarFallback(currentUser.name),
+                          )
+                        : _buildAvatarFallback(currentUser.name),
+                  ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Text(
                   currentUser.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ],
             ),
             actions: const [
               NotificationBell(),
+              SizedBox(width: 8),
             ],
           ),
-          body: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (displayScore != null)
-                _buildLatestScoreCard(context, displayScore, currentUser.isFourSkills),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: Text(
-                  'Lịch sử thi (Nhấn để xem)',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ),
-              if (currentUser.scores.isEmpty)
-                const Expanded(
-                  child: Center(
-                    child: Text(
-                      'Chưa có dữ liệu điểm.\nHãy thêm điểm mới!',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ),
-                )
-              else
-                Expanded(
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    itemCount: currentUser.scores.length + 1, // Thêm 1 row cho Support
-                    itemBuilder: (context, index) {
-                      if (index == currentUser.scores.length) {
-                        // HIỂN THỊ THÔNG TIN HỖ TRỢ Ở CUỐI DANH SÁCH
-                        return StreamBuilder<DocumentSnapshot>(
-                          stream: FirebaseFirestore.instance.collection('config').doc('system').snapshots(),
-                          builder: (context, configSnapshot) {
-                            String zalo = '...';
-                            if (configSnapshot.hasData && configSnapshot.data!.exists) {
-                              zalo = (configSnapshot.data!.data() as Map<String, dynamic>)['supportZalo'] ?? '';
-                            }
-                            if (zalo.isEmpty) return const SizedBox(height: 100);
-
-                            return Container(
-                              margin: const EdgeInsets.all(16),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.05),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.white10),
-                              ),
-                              child: Column(
-                                children: [
-                                  const Icon(Icons.help_outline_rounded, color: Colors.grey, size: 24),
-                                  const SizedBox(height: 8),
-                                  const Text('Bạn gặp vấn đề gì? Liên hệ quản trị viên qua Zalo:', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                                  const SizedBox(height: 4),
-                                  Text(zalo, style: const TextStyle(color: Colors.indigoAccent, fontWeight: FontWeight.bold, fontSize: 16)),
-                                ],
-                              ),
-                            );
-                          },
-                        );
-                      }
-
-                      final score = currentUser.scores[index];
-                      return Slidable(
-                        key: Key(score.id),
-                        endActionPane: ActionPane(
-                          motion: const ScrollMotion(),
-                          children: [
-                            SlidableAction(
-                              onPressed: (_) async {
-                                final result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        AddScoreScreen(existingScore: score),
-                                  ),
-                                );
-                                if (result == true && mounted) {
-                                  _showAimHitOverlay();
-                                }
-                              },
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
-                              icon: Icons.edit,
-                              label: 'Sửa',
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(10),
-                                bottomLeft: Radius.circular(10),
-                              ),
-                            ),
-                            SlidableAction(
-                              onPressed: (_) {
-                                provider.deleteScore(score.id);
-                                DynamicIslandNotification.show(
-                                  context,
-                                  title: 'Đã xóa',
-                                  message: 'Đã xóa điểm thi ngày ${DateFormat('dd/MM/yyyy').format(score.date)}',
-                                  type: NotificationType.warning,
-                                );
-                              },
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
-                              icon: Icons.delete,
-                              label: 'Xóa',
-                              borderRadius: const BorderRadius.only(
-                                topRight: Radius.circular(10),
-                                bottomRight: Radius.circular(10),
-                              ),
-                            ),
-                          ],
-                        ),
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _viewedScore = score;
-                            });
-                          },
-                          child: Card(
-                            margin: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 6,
-                            ),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: Theme.of(
-                                  context,
-                                ).colorScheme.primary.withAlpha(51),
-                                child: Text(
-                                  '${score.calculateTotal(currentUser.isFourSkills)}',
-                                  style: TextStyle(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                              title: Text(
-                                DateFormat('dd/MM/yyyy').format(score.date),
-                              ),
-                              subtitle: Text(
-                                currentUser.isFourSkills 
-                                    ? 'L: ${score.listeningScore} | R: ${score.readingScore} | S: ${score.speakingScore ?? 0} | W: ${score.writingScore ?? 0}'
-                                    : 'Listening: ${score.listeningScore} | Reading: ${score.readingScore}',
-                              ),
-                              trailing: const Icon(
-                                Icons.arrow_forward_ios,
-                                size: 16,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-            ],
-          ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           floatingActionButton: AnimatedSlide(
             offset: _isFabVisible ? Offset.zero : const Offset(0, 2),
             duration: const Duration(milliseconds: 300),
             child: AnimatedOpacity(
               opacity: _isFabVisible ? 1 : 0,
               duration: const Duration(milliseconds: 300),
-              child: FloatingActionButton.extended(
-                onPressed: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const AddScoreScreen()),
-                  );
-                  if (result == true && mounted) {
-                    _showAimHitOverlay();
-                  }
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('Nhập điểm'),
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 80),
+                child: GlassButtonV2(
+                  title: 'Nhập điểm',
+                  icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                  onTap: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AddScoreScreen()),
+                    );
+                    if (result == true && mounted) {
+                      _showAimHitOverlay();
+                    }
+                  },
+                ),
               ),
             ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (displayScore != null)
+                _buildLatestScoreHeroCard(context, displayScore, currentUser.isFourSkills),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'LỊCH SỬ THI',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.1,
+                        color: Colors.white.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    if (currentUser.scores.isNotEmpty)
+                      Text(
+                        '${currentUser.scores.length} bài thi',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withValues(alpha: 0.5),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (currentUser.scores.isEmpty)
+                Expanded(
+                  child: Center(
+                    child: LiquidGlassContainer(
+                      margin: const EdgeInsets.all(24),
+                      child: Text(
+                        'Chưa có dữ liệu điểm.\nHãy nhấn "Nhập điểm" để bắt đầu!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                Expanded(
+                  child: CommonScrollbarWithIosStatusBarTapDetectorV2(
+                    controller: _scrollController,
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
+                      itemCount: currentUser.scores.length + 1,
+                      itemBuilder: (context, index) {
+                        if (index == currentUser.scores.length) {
+                          return _buildSupportContactCard();
+                        }
+
+                        final score = currentUser.scores[index];
+                        final isSelected = _viewedScore?.id == score.id;
+                        final total = score.calculateTotal(currentUser.isFourSkills);
+
+                        return Slidable(
+                          key: Key(score.id),
+                          endActionPane: ActionPane(
+                            motion: const ScrollMotion(),
+                            children: [
+                              SlidableAction(
+                                onPressed: (_) async {
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => AddScoreScreen(existingScore: score),
+                                    ),
+                                  );
+                                  if (result == true && mounted) {
+                                    _showAimHitOverlay();
+                                  }
+                                },
+                                backgroundColor: const Color(0xFF3B82F6),
+                                foregroundColor: Colors.white,
+                                icon: Icons.edit_rounded,
+                                label: 'Sửa',
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(16),
+                                  bottomLeft: Radius.circular(16),
+                                ),
+                              ),
+                              SlidableAction(
+                                onPressed: (_) {
+                                  provider.deleteScore(score.id);
+                                  DynamicIslandNotification.show(
+                                    context,
+                                    title: 'Đã xóa',
+                                    message:
+                                        'Đã xóa điểm thi ngày ${DateFormat('dd/MM/yyyy').format(score.date)}',
+                                    type: NotificationType.warning,
+                                  );
+                                },
+                                backgroundColor: const Color(0xFFEF4444),
+                                foregroundColor: Colors.white,
+                                icon: Icons.delete_outline_rounded,
+                                label: 'Xóa',
+                                borderRadius: const BorderRadius.only(
+                                  topRight: Radius.circular(16),
+                                  bottomRight: Radius.circular(16),
+                                ),
+                              ),
+                            ],
+                          ),
+                          child: PressableCardContainerV2(
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            borderRadius: 18,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            color: isSelected
+                                ? LiquidGlassTheme.primaryAccent.withValues(alpha: 0.16)
+                                : Colors.white.withValues(alpha: 0.06),
+                            borderColor: isSelected
+                                ? LiquidGlassTheme.primaryAccent.withValues(alpha: 0.5)
+                                : Colors.white.withValues(alpha: 0.1),
+                            borderWidth: 1.0,
+                            onTap: () {
+                              setState(() {
+                                _viewedScore = score;
+                              });
+                            },
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        LiquidGlassTheme.scoreTotal.withValues(alpha: 0.3),
+                                        LiquidGlassTheme.scoreTotal.withValues(alpha: 0.1),
+                                      ],
+                                    ),
+                                    border: Border.all(
+                                      color: LiquidGlassTheme.scoreTotal.withValues(alpha: 0.4),
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '$total',
+                                      style: const TextStyle(
+                                        color: LiquidGlassTheme.scoreTotal,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        DateFormat('dd/MM/yyyy').format(score.date),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 15,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        currentUser.isFourSkills
+                                            ? 'L: ${score.listeningScore} | R: ${score.readingScore} | S: ${score.speakingScore ?? 0} | W: ${score.writingScore ?? 0}'
+                                            : 'Nghe: ${score.listeningScore} | Đọc: ${score.readingScore}',
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(alpha: 0.55),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.chevron_right_rounded,
+                                  size: 20,
+                                  color: Colors.white.withValues(alpha: 0.4),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+            ],
           ),
         );
       },
     );
   }
 
-  Widget _buildLatestScoreCard(
+  Widget _buildAvatarFallback(String name) {
+    return Center(
+      child: Text(
+        name.isNotEmpty ? name[0].toUpperCase() : '?',
+        style: const TextStyle(fontSize: 13, color: Colors.white, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildLatestScoreHeroCard(
     BuildContext context,
     ToeicScore displayedScore,
     bool isFourSkills,
   ) {
-    bool isViewingPast = _viewedScore != null;
-    return Container(
-      margin: const EdgeInsets.all(16),
+    final bool isViewingPast = _viewedScore != null;
+    final total = displayedScore.calculateTotal(isFourSkills);
+
+    return LiquidGlassContainer(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      borderRadius: 24,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).colorScheme.primary.withAlpha(204),
-            const Color(0xFF3949AB),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withAlpha(51),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0x334F46E5),
+          Color(0x1A0F172A),
         ],
       ),
+      borderColor: Colors.white.withValues(alpha: 0.2),
       child: Stack(
         children: [
           Column(
             children: [
-              Text(
-                isViewingPast
-                    ? 'ĐIỂM NGÀY ${DateFormat('dd/MM/yyyy').format(displayedScore.date)}'
-                    : 'ĐIỂM GẦN NHẤT',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${displayedScore.calculateTotal(isFourSkills)}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Column(
-                    children: [
-                      const Icon(Icons.headphones, color: Colors.white),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${displayedScore.listeningScore}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    isViewingPast
+                        ? 'ĐIỂM NGÀY ${DateFormat('dd/MM/yyyy').format(displayedScore.date)}'
+                        : 'KẾT QUẢ GẦN NHẤT',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.0,
+                    ),
                   ),
-                  Container(width: 1, height: 40, color: Colors.white30),
-                  Column(
-                    children: [
-                      const Icon(Icons.menu_book, color: Colors.white),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${displayedScore.readingScore}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                        ),
-                      ),
-                    ],
+                ],
+              ),
+              const SizedBox(height: 6),
+              ShaderMask(
+                blendMode: BlendMode.srcIn,
+                shaderCallback: (bounds) => const LinearGradient(
+                  colors: [Colors.white, Color(0xFFC7D2FE)],
+                ).createShader(bounds),
+                child: Text(
+                  '$total',
+                  style: const TextStyle(
+                    fontSize: 52,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -1.5,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Skill badges
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  LiquidGlassChip(
+                    icon: Icons.headphones_rounded,
+                    label: 'Nghe',
+                    value: '${displayedScore.listeningScore}',
+                    accentColor: LiquidGlassTheme.scoreListening,
+                  ),
+                  LiquidGlassChip(
+                    icon: Icons.menu_book_rounded,
+                    label: 'Đọc',
+                    value: '${displayedScore.readingScore}',
+                    accentColor: LiquidGlassTheme.scoreReading,
                   ),
                   if (isFourSkills) ...[
-                    Container(width: 1, height: 40, color: Colors.white30),
-                    Column(
-                      children: [
-                        const Icon(Icons.mic, color: Colors.white),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${displayedScore.speakingScore ?? 0}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                          ),
-                        ),
-                      ],
+                    LiquidGlassChip(
+                      icon: Icons.mic_rounded,
+                      label: 'Nói',
+                      value: '${displayedScore.speakingScore ?? 0}',
+                      accentColor: LiquidGlassTheme.scoreSpeaking,
                     ),
-                    Container(width: 1, height: 40, color: Colors.white30),
-                    Column(
-                      children: [
-                        const Icon(Icons.edit_document, color: Colors.white),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${displayedScore.writingScore ?? 0}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                          ),
-                        ),
-                      ],
+                    LiquidGlassChip(
+                      icon: Icons.edit_note_rounded,
+                      label: 'Viết',
+                      value: '${displayedScore.writingScore ?? 0}',
+                      accentColor: LiquidGlassTheme.scoreWriting,
                     ),
                   ],
                 ],
               ),
+
               const SizedBox(height: 16),
+
+              // CTA Action buttons
               Row(
                 children: [
                   Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
+                    child: GlassButtonV2(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      title: 'Lộ trình',
+                      icon: const Icon(Icons.auto_awesome_rounded, size: 16, color: Colors.white),
+                      onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) =>
-                                LearningPathScreen(targetScore: displayedScore),
+                            builder: (_) => LearningPathScreen(targetScore: displayedScore),
                           ),
                         );
                       },
-                      icon: const Icon(Icons.auto_awesome, size: 18),
-                      label: const Text(
-                        'Lộ trình',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white.withOpacity(0.2),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
+                    child: GlassButtonV2(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      title: 'Thi thử',
+                      icon: const Icon(Icons.assignment_turned_in_rounded, size: 16, color: Colors.white),
+                      onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const ExamListScreen()),
                         );
                       },
-                      icon: const Icon(Icons.assignment_turned_in_rounded, size: 18),
-                      label: const Text(
-                        'Luyện thi thử',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF3949AB),
-                        elevation: 5,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
                     ),
                   ),
                 ],
@@ -477,20 +499,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           if (isViewingPast)
             Positioned(
-              top: -10,
-              left: -10,
+              top: -6,
+              left: -6,
               child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white70, size: 20),
                 onPressed: () {
                   setState(() {
                     _viewedScore = null;
                   });
                 },
-                tooltip: 'Trở về điểm hiện tại',
+                tooltip: 'Trở về điểm gần nhất',
               ),
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSupportContactCard() {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('config').doc('system').snapshots(),
+      builder: (context, configSnapshot) {
+        String zalo = '';
+        if (configSnapshot.hasData && configSnapshot.data!.exists) {
+          zalo = (configSnapshot.data!.data() as Map<String, dynamic>)['supportZalo'] ?? '';
+        }
+        if (zalo.isEmpty) return const SizedBox(height: 80);
+
+        return LiquidGlassContainer(
+          margin: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.all(16),
+          borderRadius: 20,
+          child: Column(
+            children: [
+              const Icon(Icons.support_agent_rounded, color: LiquidGlassTheme.secondaryAccent, size: 28),
+              const SizedBox(height: 6),
+              Text(
+                'Hỗ trợ & giải đáp thắc mắc qua Zalo:',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 12),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                zalo,
+                style: const TextStyle(
+                  color: LiquidGlassTheme.secondaryAccent,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -538,18 +599,17 @@ class _AimHitOverlayState extends State<_AimHitOverlay> {
         });
       },
       child: Material(
-        color: Colors.black.withOpacity(0.4),
+        color: Colors.black.withValues(alpha: 0.6),
         child: AnimatedOpacity(
           opacity: _opacity,
           duration: const Duration(milliseconds: 500),
           child: Stack(
             children: [
-              // Bắn từ bên trái
               Align(
                 alignment: Alignment.bottomLeft,
                 child: ConfettiWidget(
                   confettiController: widget.confettiController,
-                  blastDirection: -3.14 / 4, // Chếch lên phải
+                  blastDirection: -3.14 / 4,
                   emissionFrequency: 0.3,
                   numberOfParticles: 20,
                   maxBlastForce: 100,
@@ -558,12 +618,11 @@ class _AimHitOverlayState extends State<_AimHitOverlay> {
                   colors: const [Colors.red, Colors.yellow, Colors.pink, Colors.orange],
                 ),
               ),
-              // Bắn từ bên phải
               Align(
                 alignment: Alignment.bottomRight,
                 child: ConfettiWidget(
                   confettiController: widget.confettiController,
-                  blastDirection: -3 * 3.14 / 4, // Chếch lên trái
+                  blastDirection: -3 * 3.14 / 4,
                   emissionFrequency: 0.3,
                   numberOfParticles: 20,
                   maxBlastForce: 100,
@@ -572,13 +631,12 @@ class _AimHitOverlayState extends State<_AimHitOverlay> {
                   colors: const [Colors.blue, Colors.green, Colors.purple, Colors.cyan],
                 ),
               ),
-              // Bắn từ giữa thò thụt tưng bừng
               Align(
                 alignment: Alignment.bottomCenter,
                 child: ConfettiWidget(
                   confettiController: widget.confettiController,
-                  blastDirection: -3.14 / 2, // UP
-                  blastDirectionality: BlastDirectionality.explosive, // Bắn tỏa tròn
+                  blastDirection: -3.14 / 2,
+                  blastDirectionality: BlastDirectionality.explosive,
                   maxBlastForce: 150,
                   minBlastForce: 80,
                   emissionFrequency: 0.4,
@@ -597,30 +655,31 @@ class _AimHitOverlayState extends State<_AimHitOverlay> {
                 ),
               ),
               Center(
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  margin: const EdgeInsets.symmetric(horizontal: 24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                child: LiquidGlassContainer(
+                  margin: const EdgeInsets.symmetric(horizontal: 28),
+                  padding: const EdgeInsets.all(28),
+                  borderRadius: 24,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'Sự cố gắng cuối cùng cũng được đền đáp rồi! Chúc mừng bạn đã đạt được mức Aim <3',
+                      const Icon(Icons.stars_rounded, size: 48, color: Color(0xFFFFD700)),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Chúc mừng bạn đã đạt mức Aim!',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: const Color(0xFFFF3366),
-                          shadows: [
-                            Shadow(
-                              color: Colors.pinkAccent.withOpacity(0.4),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Sự nỗ lực không ngừng của bạn đã được đền đáp xứng đáng 🎉',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withValues(alpha: 0.75),
                         ),
                       ),
                     ],

@@ -1,0 +1,35 @@
+name: may_uikit_widgetbook
+description: Widgetbook catalog for May UI Kit.
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.5 <4.0.0'
+
+dependency_overrides:
+  analyzer: 7.1.0
+  dart_style: 3.1.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  may_uikit:
+    path: ../
+  widgetbook: 3.19.0
+  widgetbook_annotation: ^3.2.0
+
+dev_dependencies:
+  build_runner: 2.5.4
+  flutter_lints: ^5.0.0
+  flutter_test:
+    sdk: flutter
+  widgetbook_generator: any
+
+flutter:
+  assets:
+    - packages/may_uikit/assets/icons/
+    - packages/may_uikit/assets/images/
+  uses-material-design: true

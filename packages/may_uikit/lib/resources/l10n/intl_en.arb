@@ -1,0 +1,20 @@
+{
+  "@@locale": "en",
+  "cancel": "Cancel",
+  "ok": "OK",
+  "retry": "Retry",
+  "deleteAccountConfirm": "Are you sure you want to delete this account?",
+  "logoutConfirm": "Are you sure you want to logout?",
+  "maintenanceTitle": "System is under maintenance",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "themeAuto": "Auto",
+  "actionClose": "Close",
+  "actionLogout": "Logout",
+  "actionConfirm": "Confirm",
+  "searchPlaceholder": "Search",
+  "emptyDataTitle": "Empty",
+  "emptyDataDescription": "Data is empty",
+  "actionUnderstand": "Understood",
+  "actionSettings": "Settings"
+}

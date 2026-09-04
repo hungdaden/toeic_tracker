@@ -1,0 +1,14 @@
+stages:
+  - build-uikit
+
+build-uikit:
+  stage: build-uikit
+  tags:
+    - build
+  only:
+    - development
+  script:
+    - echo "Triggering Jenkins build for Widgetbook-May-UiKit..."
+    - |
+      curl --location --request POST "https://jenkins-runner-mac.phx.asia/job/Common/job/May-Uikit/build" \
+        --header "Authorization: Basic $AUTH_TRIGGER_JENKINS"
