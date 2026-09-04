@@ -22,6 +22,9 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Disable Swift Package Manager
+        run: flutter config --no-enable-swift-package-manager
+
       - name: Create assets directory and .env file
         run: |
           mkdir -p assets
@@ -30,8 +33,14 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install --repo-update
+
       - name: Build iOS
         run: flutter build ios --release --no-codesign
+
 
       - name: Package IPA (Sideload Ready)
         run: |
