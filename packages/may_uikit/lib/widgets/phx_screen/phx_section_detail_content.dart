@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_html/flutter_html.dart';
 import 'package:may_uikit/may_uikit.dart';
 
 /// Renders the detail content for a PHX section.
@@ -210,87 +209,11 @@ class PHXSectionDetailContentV2 extends StatelessWidget {
     PHXSectionItemEntity item,
     String htmlContent,
   ) {
-    return Html(
-      data: htmlContent,
-      shrinkWrap: true,
-      style: {
-        'body': Style(
-          margin: Margins.zero,
-          padding: HtmlPaddings.zero,
-          fontSize: FontSize(DimensV2.d14),
-        ),
-        'a': Style(
-          color: AppColorsV2.primaryBlue,
-          textDecoration: TextDecoration.underline,
-          textDecorationColor: AppColorsV2.primaryBlue,
-        ),
-      },
-      onLinkTap: (url, _, __) async {
-        if (url == null) {
-          return;
-        }
-
-        var clean = url.trim().replaceAll('&amp;', '&');
-        if (clean.endsWith('/')) {
-          clean = clean.substring(0, clean.length - 1);
-        }
-
-        final uri = Uri.tryParse(clean);
-        if (uri == null) {
-          return;
-        }
-
-        onLinkTap?.call(clean);
-      },
-      extensions: [
-        TagExtension(
-          tagsToExtend: {'img'},
-          builder: (extensionContext) {
-            final attributes = extensionContext.attributes;
-            final src = attributes['src'] ?? '';
-
-            if (src.isEmpty) {
-              return const SizedBox.shrink();
-            }
-
-            return GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  extensionContext.buildContext!,
-                  PageRouteBuilder(
-                    opaque: false,
-                    pageBuilder: (context, animation, secondaryAnimation) =>
-                        ExtendImageViewWidgetV2(url: src, title: item.title ?? ''),
-                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                      return FadeTransition(
-                        opacity: animation,
-                        child: child,
-                      );
-                    },
-                    transitionDuration: const Duration(milliseconds: 200),
-                    reverseTransitionDuration: const Duration(milliseconds: 200),
-                  ),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: DimensV2.d8),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(DimensV2.d8),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: CommonImageV2.network(
-                      url: src,
-                      fit: BoxFit.cover,
-                      enableCache: true,
-                      fadeInDuration: Duration.zero,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      ],
+    return Text(
+      htmlContent,
+      style: AppTextStylesV2.text14Regular.copyWith(
+        color: AppColorsV2.neutral700,
+      ),
     );
   }
 
