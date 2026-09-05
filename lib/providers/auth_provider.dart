@@ -38,27 +38,40 @@ class AuthProvider extends ChangeNotifier {
   Future<String?> signInWithEmail(String email, String password) async {
     _setLoading(true);
     try {
-      // 1. KIỂM TRA CHẾ ĐỘ BẢO TRÌ
-      final configDoc = await FirebaseFirestore.instance.collection('config').doc('system').get();
-      if (configDoc.exists && (configDoc.data() as Map<String, dynamic>)['maintenanceMode'] == true) {
-        return "Hệ thống đang bảo trì để nâng cấp. Vui lòng quay lại sau ít phút.";
+      // 1. KIỂM TRA CHẾ ĐỘ BẢO TRÌ (có timeout an toàn)
+      try {
+        final configDoc = await FirebaseFirestore.instance
+            .collection('config')
+            .doc('system')
+            .get()
+            .timeout(const Duration(seconds: 5));
+        if (configDoc.exists && (configDoc.data() as Map<String, dynamic>?)?['maintenanceMode'] == true) {
+          return "Hệ thống đang bảo trì để nâng cấp. Vui lòng quay lại sau ít phút.";
+        }
+      } catch (e) {
+        debugPrint("Warning: Bỏ qua kiểm tra bảo trì do timeout/lỗi: $e");
       }
 
       UserCredential result = await _auth.signInWithEmailAndPassword(email: email, password: password);
       
       if (result.user != null) {
-        // KIỂM TRA TÀI KHOẢN CÓ BỊ KHÓA KHÔNG (Ép buộc lấy từ Server để tránh Cache cũ)
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .where('authUid', isEqualTo: result.user!.uid)
-            .get(const GetOptions(source: Source.server));
+        // KIỂM TRA TÀI KHOẢN CÓ BỊ KHÓA KHÔNG (timeout 5s để tránh treo)
+        try {
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .where('authUid', isEqualTo: result.user!.uid)
+              .get(const GetOptions(source: Source.server))
+              .timeout(const Duration(seconds: 5));
 
-        if (userDoc.docs.isNotEmpty) {
-          final userData = userDoc.docs.first.data();
-          if (userData['isDisabled'] == true) {
-            await _auth.signOut();
-            return "Tài khoản của bạn đã bị khóa bởi quản trị viên.";
+          if (userDoc.docs.isNotEmpty) {
+            final userData = userDoc.docs.first.data();
+            if (userData['isDisabled'] == true) {
+              await _auth.signOut();
+              return "Tài khoản của bạn đã bị khóa bởi quản trị viên.";
+            }
           }
+        } catch (e) {
+          debugPrint("Warning: Bỏ qua kiểm tra server do timeout/lỗi mạng: $e");
         }
       }
       return null; // Success
@@ -91,10 +104,18 @@ class AuthProvider extends ChangeNotifier {
   Future<String?> signInWithGoogle() async {
     _setLoading(true);
     try {
-      // 1. KIỂM TRA CHẾ ĐỘ BẢO TRÌ
-      final configDoc = await FirebaseFirestore.instance.collection('config').doc('system').get();
-      if (configDoc.exists && (configDoc.data() as Map<String, dynamic>)['maintenanceMode'] == true) {
-        return "Hệ thống đang bảo trì để nâng cấp. Vui lòng quay lại sau ít phút.";
+      // 1. KIỂM TRA CHẾ ĐỘ BẢO TRÌ (có timeout an toàn)
+      try {
+        final configDoc = await FirebaseFirestore.instance
+            .collection('config')
+            .doc('system')
+            .get()
+            .timeout(const Duration(seconds: 5));
+        if (configDoc.exists && (configDoc.data() as Map<String, dynamic>?)?['maintenanceMode'] == true) {
+          return "Hệ thống đang bảo trì để nâng cấp. Vui lòng quay lại sau ít phút.";
+        }
+      } catch (e) {
+        debugPrint("Warning: Bỏ qua kiểm tra bảo trì trong Google SignIn do timeout/lỗi: $e");
       }
 
       if (kIsWeb) {

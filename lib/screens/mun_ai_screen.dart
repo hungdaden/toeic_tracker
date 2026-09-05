@@ -38,10 +38,10 @@ class _MunAIScreenState extends State<MunAIScreen> {
   @override
   void initState() {
     super.initState();
+    // Khởi tạo model mặc định ngay lập tức để không bao giờ bị null gây treo loading
+    _model = GenerativeModel(model: 'gemini-2.0-flash', apiKey: _apiKey);
+    _initOrLoadLastSession();
     _loadAIConfig();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initOrLoadLastSession();
-    });
   }
 
   @override
@@ -54,7 +54,11 @@ class _MunAIScreenState extends State<MunAIScreen> {
 
   Future<void> _loadAIConfig() async {
     try {
-      final doc = await FirebaseFirestore.instance.collection('config').doc('system').get();
+      final doc = await FirebaseFirestore.instance
+          .collection('config')
+          .doc('system')
+          .get()
+          .timeout(const Duration(seconds: 5));
       String modelName = 'gemini-2.0-flash';
       if (doc.exists) {
         final data = doc.data()!;
@@ -68,7 +72,8 @@ class _MunAIScreenState extends State<MunAIScreen> {
         });
       }
     } catch (e) {
-      if (mounted) {
+      debugPrint("Mun AI: Dùng cấu hình AI mặc định do timeout/lỗi: $e");
+      if (mounted && _model == null) {
         setState(() {
           _model = GenerativeModel(model: 'gemini-2.0-flash', apiKey: _apiKey);
         });

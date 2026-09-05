@@ -73,6 +73,15 @@ class UserProvider with ChangeNotifier {
   void _initAndListen() {
     if (_authUid == null) return;
     
+    // Safety fallback timer: Nếu Firestore snapshots không phản hồi sau 5s, tắt _isLoading để không chặn giao diện
+    Timer(const Duration(seconds: 5), () {
+      if (_isLoading) {
+        debugPrint('UserProvider: Snapshot timeout/offline, resetting _isLoading = false');
+        _isLoading = false;
+        notifyListeners();
+      }
+    });
+
     _usersSubscription = _firestore
         .collection('users')
         .where('authUid', isEqualTo: _authUid)

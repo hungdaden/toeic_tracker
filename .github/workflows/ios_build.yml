@@ -68,6 +68,10 @@ jobs:
             exit 1
           fi
           cp -r "$APP_PATH" build/ios/iphoneos/Runner.app
+          if [ -f "ios/Runner/GoogleService-Info.plist" ]; then
+            cp "ios/Runner/GoogleService-Info.plist" build/ios/iphoneos/Runner.app/
+            echo "Copied GoogleService-Info.plist into Runner.app"
+          fi
           cd build/ios/iphoneos
           rm -rf Payload
           mkdir Payload

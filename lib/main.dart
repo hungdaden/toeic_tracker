@@ -4,7 +4,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
-import 'services/notification_service.dart';
 import 'providers/user_provider.dart';
 import 'providers/auth_provider.dart';
 import 'screens/main_screen.dart';
@@ -17,14 +16,23 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   print('APP_START: Hàm main đang chạy...');
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: "assets/.env");
+  try {
+    await dotenv.load(fileName: "assets/.env");
+  } catch (e) {
+    debugPrint('Warning: Không thể load assets/.env: $e');
+  }
+  
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   
-  // Kích hoạt bộ nhớ đệm Local (Cache) để tiết kiệm băng thông
-  FirebaseFirestore.instance.settings = const Settings(
-    persistenceEnabled: true, // Kích hoạt trên Web/Mobile
-    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED, // Không giới hạn kích thước cache
-  );
+  // Kích hoạt bộ nhớ đệm Local (Cache) an toàn
+  try {
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
+  } catch (e) {
+    debugPrint('Firestore settings error: $e');
+  }
   
   runApp(
     MultiProvider(
@@ -80,6 +88,13 @@ class _ToeicTrackerAppState extends State<ToeicTrackerApp> {
             _isFirstLoad = false;
           });
         }
+      }
+    }, onError: (error) {
+      debugPrint('Maintenance mode listener error: $error');
+      if (mounted && _isFirstLoad) {
+        setState(() {
+          _isFirstLoad = false;
+        });
       }
     });
   }
