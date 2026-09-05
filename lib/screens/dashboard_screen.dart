@@ -143,7 +143,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               opacity: _isFabVisible ? 1 : 0,
               duration: const Duration(milliseconds: 300),
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 80),
+                padding: EdgeInsets.only(
+                  bottom: LiquidGlassTheme.getFloatingButtonBottomPadding(context),
+                ),
                 child: GlassButtonV2(
                   title: 'Nhập điểm',
                   icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),

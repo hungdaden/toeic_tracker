@@ -166,14 +166,16 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Kết Quả Thi'),
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Text('Kết Quả Thi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Tổng điểm: ${result.totalScore}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue)),
-            const SizedBox(height: 10),
-            Text('Listening: ${result.listeningScore} (${result.correctListening}/100)'),
-            Text('Reading: ${result.readingScore} (${result.correctReading}/100)'),
+            Text('Tổng điểm: ${result.totalScore}', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+            const SizedBox(height: 12),
+            Text('Listening: ${result.listeningScore} (${result.correctListening}/100)', style: const TextStyle(color: Colors.white70, fontSize: 14)),
+            const SizedBox(height: 4),
+            Text('Reading: ${result.readingScore} (${result.correctReading}/100)', style: const TextStyle(color: Colors.white70, fontSize: 14)),
           ],
         ),
         actions: [
@@ -190,7 +192,7 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
               Navigator.pop(context); 
               Navigator.pop(context); 
             },
-            child: const Text('Lưu & Thoát'),
+            child: const Text('Lưu & Thoát', style: TextStyle(color: Color(0xFF818CF8), fontWeight: FontWeight.bold)),
           ),
         ],
       ),

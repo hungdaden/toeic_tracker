@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:may_uikit/may_uikit.dart';
 import '../widgets/dynamic_island_notification.dart';
 import '../providers/user_provider.dart';
 import '../models/user_model.dart';
+import '../theme/liquid_glass_theme.dart';
 
 class GroupDialog extends StatefulWidget {
   const GroupDialog({super.key});
@@ -113,65 +115,88 @@ class _GroupDialogState extends State<GroupDialog> with SingleTickerProviderStat
     final isWaitingApproval = user?.pendingGroupId != null;
 
     if (isWaitingApproval) {
-      return AlertDialog(
-        title: const Text('Đang Chờ Duyệt'),
-        content: FutureBuilder<DocumentSnapshot>(
-          future: FirebaseFirestore.instance.collection('groups').doc(user!.pendingGroupId).get(),
-          builder: (context, snapshot) {
-            String displayName = user.pendingGroupId ?? '';
-            if (snapshot.hasData && snapshot.data!.exists) {
-              displayName = (snapshot.data!.data() as Map<String, dynamic>)['name'] ?? displayName;
-            }
-            
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.hourglass_empty_rounded, size: 50, color: Colors.orange),
-                const SizedBox(height: 16),
-                Text(
-                  'Bạn đã gửi yêu cầu tham gia nhóm $displayName.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Vui lòng chờ trưởng nhóm hoặc phó nhóm phê duyệt.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            );
-          }
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              await provider.rejectMember(user); // Tự hủy yêu cầu bằng cách xóa pendingGroupId
-              if (mounted) Navigator.pop(context);
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+        child: LiquidGlassContainer(
+          borderRadius: 24,
+          padding: const EdgeInsets.all(24),
+          child: FutureBuilder<DocumentSnapshot>(
+            future: FirebaseFirestore.instance.collection('groups').doc(user!.pendingGroupId).get(),
+            builder: (context, snapshot) {
+              String displayName = user.pendingGroupId ?? '';
+              if (snapshot.hasData && snapshot.data!.exists) {
+                displayName = (snapshot.data!.data() as Map<String, dynamic>)['name'] ?? displayName;
+              }
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Đang Chờ Duyệt',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.hourglass_empty_rounded, size: 48, color: Colors.orangeAccent),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Bạn đã gửi yêu cầu tham gia nhóm $displayName.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Vui lòng chờ trưởng nhóm hoặc phó nhóm phê duyệt.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.6)),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () async {
+                          await provider.rejectMember(user);
+                          if (mounted) Navigator.pop(context);
+                        },
+                        child: const Text('Hủy yêu cầu', style: TextStyle(color: Colors.redAccent)),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Đóng', style: TextStyle(color: Colors.white70)),
+                      ),
+                    ],
+                  ),
+                ],
+              );
             },
-            child: const Text('Hủy yêu cầu', style: TextStyle(color: Colors.red)),
           ),
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Đóng')),
-        ],
+        ),
       );
     }
 
-    return AlertDialog(
-      title: Text(inGroup ? 'Quản Lý Nhóm' : 'Nhóm Học Tập'),
-      contentPadding: EdgeInsets.zero,
-      content: inGroup 
-        ? _buildInGroupContent(user!, provider)
-        : Padding(
-            padding: const EdgeInsets.all(20),
-            child: _buildNoGroupContent(provider),
-          ),
-      actions: [
-        if (!inGroup)
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Đóng'),
-          ),
-      ],
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+      child: LiquidGlassContainer(
+        borderRadius: 24,
+        padding: inGroup ? const EdgeInsets.fromLTRB(16, 16, 16, 8) : const EdgeInsets.all(24),
+        child: inGroup
+            ? _buildInGroupContent(user, provider)
+            : _buildNoGroupContent(provider),
+      ),
     );
   }
 
@@ -182,11 +207,33 @@ class _GroupDialogState extends State<GroupDialog> with SingleTickerProviderStat
 
     return SizedBox(
       width: double.maxFinite,
-      height: 450,
+      height: 480,
       child: Column(
         children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(left: 8),
+                child: Text(
+                  'Quản Lý Nhóm',
+                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
           TabBar(
             controller: _tabController,
+            indicatorColor: LiquidGlassTheme.primaryAccent,
+            indicatorWeight: 3,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white54,
+            labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             tabs: [
               const Tab(text: 'Thành viên'),
               Tab(
@@ -196,10 +243,10 @@ class _GroupDialogState extends State<GroupDialog> with SingleTickerProviderStat
                     const Text('Yêu cầu'),
                     if (provider.pendingMembers.isNotEmpty)
                       Container(
-                        margin: const EdgeInsets.only(left: 4),
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                        child: Text('${provider.pendingMembers.length}', style: const TextStyle(fontSize: 10, color: Colors.white)),
+                        margin: const EdgeInsets.only(left: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(color: Colors.redAccent, borderRadius: BorderRadius.circular(10)),
+                        child: Text('${provider.pendingMembers.length}', style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
                       ),
                   ],
                 ),
@@ -207,6 +254,7 @@ class _GroupDialogState extends State<GroupDialog> with SingleTickerProviderStat
               const Tab(text: 'Cài đặt'),
             ],
           ),
+          const SizedBox(height: 8),
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -214,15 +262,6 @@ class _GroupDialogState extends State<GroupDialog> with SingleTickerProviderStat
                 _buildMembersList(currentUser, provider),
                 _buildPendingRequestsList(canManage, provider),
                 _buildSettingsTab(isLeader, provider),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Đóng')),
               ],
             ),
           ),
@@ -241,15 +280,26 @@ class _GroupDialogState extends State<GroupDialog> with SingleTickerProviderStat
         final member = members[index];
         final memberIsLeader = member.groupRole == 'leader';
         final memberIsCoLeader = member.groupRole == 'co-leader';
-        
+
         return ListTile(
           leading: CircleAvatar(
+            backgroundColor: LiquidGlassTheme.primaryAccent.withValues(alpha: 0.3),
             backgroundImage: member.avatarUrl != null ? NetworkImage(member.avatarUrl!) : null,
-            child: member.avatarUrl == null ? Text(member.name[0]) : null,
+            child: member.avatarUrl == null ? Text(member.name[0], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)) : null,
           ),
-          title: Text(member.name),
-          subtitle: Text(memberIsLeader ? 'Trưởng nhóm' : (memberIsCoLeader ? 'Phó nhóm' : 'Thành viên')),
+          title: Text(member.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          subtitle: Text(
+            memberIsLeader ? 'Trưởng nhóm' : (memberIsCoLeader ? 'Phó nhóm' : 'Thành viên'),
+            style: TextStyle(
+              color: memberIsLeader
+                  ? Colors.amberAccent
+                  : (memberIsCoLeader ? Colors.cyanAccent : Colors.white54),
+              fontSize: 12,
+            ),
+          ),
           trailing: isLeader && member.id != currentUser.id ? PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert_rounded, color: Colors.white70),
+            color: const Color(0xFF1E293B),
             onSelected: (val) async {
               try {
                 if (val == 'kick') {
@@ -287,8 +337,8 @@ class _GroupDialogState extends State<GroupDialog> with SingleTickerProviderStat
             },
             itemBuilder: (context) => [
               if (!memberIsCoLeader)
-                const PopupMenuItem(value: 'promote', child: Text('Phong phó nhóm')),
-              const PopupMenuItem(value: 'kick', child: Text('Xóa khỏi nhóm', style: TextStyle(color: Colors.red))),
+                const PopupMenuItem(value: 'promote', child: Text('Phong phó nhóm', style: TextStyle(color: Colors.white))),
+              const PopupMenuItem(value: 'kick', child: Text('Xóa khỏi nhóm', style: TextStyle(color: Colors.redAccent))),
             ],
           ) : null,
         );
@@ -298,20 +348,20 @@ class _GroupDialogState extends State<GroupDialog> with SingleTickerProviderStat
 
   Widget _buildPendingRequestsList(bool canManage, UserProvider provider) {
     final requests = provider.pendingMembers;
-    if (!canManage) return const Center(child: Text('Chỉ trưởng/phó nhóm mới có thể duyệt.'));
-    if (requests.isEmpty) return const Center(child: Text('Không có yêu cầu nào.'));
+    if (!canManage) return const Center(child: Text('Chỉ trưởng/phó nhóm mới có thể duyệt.', style: TextStyle(color: Colors.white54)));
+    if (requests.isEmpty) return const Center(child: Text('Không có yêu cầu nào.', style: TextStyle(color: Colors.white54)));
 
     return ListView.builder(
       itemCount: requests.length,
       itemBuilder: (context, index) {
         final member = requests[index];
         return ListTile(
-          title: Text(member.name),
+          title: Text(member.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                icon: const Icon(Icons.check, color: Colors.green), 
+                icon: const Icon(Icons.check_circle_rounded, color: Colors.greenAccent),
                 onPressed: () async {
                   try {
                     await provider.approveMember(member);
@@ -333,10 +383,10 @@ class _GroupDialogState extends State<GroupDialog> with SingleTickerProviderStat
                       );
                     }
                   }
-                }
+                },
               ),
               IconButton(
-                icon: const Icon(Icons.close, color: Colors.red), 
+                icon: const Icon(Icons.cancel_rounded, color: Colors.redAccent),
                 onPressed: () async {
                   try {
                     await provider.rejectMember(member);
@@ -358,7 +408,7 @@ class _GroupDialogState extends State<GroupDialog> with SingleTickerProviderStat
                       );
                     }
                   }
-                }
+                },
               ),
             ],
           ),
@@ -378,25 +428,53 @@ class _GroupDialogState extends State<GroupDialog> with SingleTickerProviderStat
         children: [
           Row(
             children: [
-              const Text('Mã nhóm: ', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text(group.id, style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-              IconButton(icon: const Icon(Icons.copy, size: 16), onPressed: () => Clipboard.setData(ClipboardData(text: group.id))),
+              const Text('Mã nhóm: ', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+              Text(
+                group.id,
+                style: const TextStyle(color: LiquidGlassTheme.secondaryAccent, fontWeight: FontWeight.bold, letterSpacing: 1.2, fontSize: 16),
+              ),
+              IconButton(
+                icon: const Icon(Icons.copy_rounded, size: 16, color: Colors.white70),
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: group.id));
+                  DynamicIslandNotification.show(
+                    context,
+                    title: 'Đã sao chép',
+                    message: 'Đã sao chép mã nhóm vào bộ nhớ tạm',
+                    type: NotificationType.info,
+                  );
+                },
+              ),
             ],
           ),
           const SizedBox(height: 16),
-          const Text('Tên nhóm', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Tên nhóm', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: _nameController..text = (_nameController.text.isEmpty ? group.name : _nameController.text),
                   enabled: isLeader,
-                  decoration: const InputDecoration(hintText: 'Nhập tên nhóm'),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Nhập tên nhóm',
+                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35)),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: LiquidGlassTheme.primaryAccent),
+                    ),
+                  ),
                 ),
               ),
-              if (isLeader)
+              if (isLeader) ...[
+                const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.save), 
+                  icon: const Icon(Icons.save_rounded, color: LiquidGlassTheme.primaryAccent),
                   onPressed: () async {
                     try {
                       await provider.updateGroupName(_nameController.text);
@@ -418,15 +496,18 @@ class _GroupDialogState extends State<GroupDialog> with SingleTickerProviderStat
                         );
                       }
                     }
-                  }
+                  },
                 ),
+              ],
             ],
           ),
           const SizedBox(height: 16),
           SwitchListTile(
-            title: const Text('Yêu cầu kiểm duyệt'),
-            subtitle: const Text('Thành viên mới cần được duyệt để tham gia'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Yêu cầu kiểm duyệt', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            subtitle: Text('Thành viên mới cần được duyệt để tham gia', style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 12)),
             value: group.requireApproval,
+            activeThumbColor: LiquidGlassTheme.primaryAccent,
             onChanged: isLeader ? (val) async {
               try {
                 await provider.toggleApproval(val);
@@ -450,20 +531,21 @@ class _GroupDialogState extends State<GroupDialog> with SingleTickerProviderStat
               }
             } : null,
           ),
-          const Divider(),
-          const SizedBox(height: 8),
+          const Divider(color: Colors.white12),
+          const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton.icon(
+            child: OutlinedButton.icon(
               onPressed: () async {
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (c) => AlertDialog(
-                    title: const Text('Rời nhóm?'),
-                    content: const Text('Nếu bạn là trưởng nhóm, quyền trưởng nhóm sẽ được chuyển giao.'),
+                    backgroundColor: const Color(0xFF1E293B),
+                    title: const Text('Rời nhóm?', style: TextStyle(color: Colors.white)),
+                    content: const Text('Nếu bạn là trưởng nhóm, quyền trưởng nhóm sẽ được chuyển giao.', style: TextStyle(color: Colors.white70)),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Hủy')),
-                      TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Xác nhận', style: TextStyle(color: Colors.red))),
+                      TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Hủy', style: TextStyle(color: Colors.white70))),
+                      TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Xác nhận', style: TextStyle(color: Colors.redAccent))),
                     ],
                   ),
                 );
@@ -472,9 +554,13 @@ class _GroupDialogState extends State<GroupDialog> with SingleTickerProviderStat
                   Navigator.pop(context);
                 }
               },
-              icon: const Icon(Icons.logout),
-              label: const Text('Rời Nhóm'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red.withOpacity(0.1), foregroundColor: Colors.red),
+              icon: const Icon(Icons.logout_rounded, color: Colors.redAccent, size: 18),
+              label: const Text('Rời Nhóm', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.4)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
             ),
           ),
         ],
@@ -486,72 +572,118 @@ class _GroupDialogState extends State<GroupDialog> with SingleTickerProviderStat
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text('Tham gia nhóm để cùng theo dõi tiến độ và thi đua cùng bạn bè!'),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Nhóm Học Tập',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close_rounded, color: Colors.white70),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Tham gia nhóm để cùng theo dõi tiến độ và thi đua cùng bạn bè!',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14),
+        ),
         const SizedBox(height: 20),
         TextField(
           controller: _codeController,
-          decoration: const InputDecoration(
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 2),
+          decoration: InputDecoration(
             labelText: 'Mã nhóm (5 ký tự)',
-            border: OutlineInputBorder(),
+            labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
             hintText: 'VD: AB123',
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: LiquidGlassTheme.primaryAccent),
+            ),
           ),
           maxLength: 5,
           textCapitalization: TextCapitalization.characters,
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         SizedBox(
           width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _isJoining ? null : _handleJoinGroup,
-            child: _isJoining 
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) 
-                : const Text('Tham Gia Nhóm'),
+          child: GlassButtonV2(
+            title: 'Tham Gia Nhóm',
+            onTap: _isJoining ? null : _handleJoinGroup,
           ),
         ),
-        const SizedBox(height: 12),
-        const Row(
+        const SizedBox(height: 16),
+        Row(
           children: [
-            Expanded(child: Divider()),
-            Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text('Hoặc')),
-            Expanded(child: Divider()),
+            Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.15))),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Text('Hoặc', style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12)),
+            ),
+            Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.15))),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         SizedBox(
           width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () async {
+          child: GlassButtonV2(
+            title: 'Tạo Nhóm Mới',
+            icon: const Icon(Icons.add_rounded, size: 20, color: Colors.white),
+            onTap: () async {
               final name = await showDialog<String>(
                 context: context,
                 builder: (c) {
                   final ctrl = TextEditingController();
                   return AlertDialog(
-                    title: const Text('Đặt Tên Nhóm'),
-                    content: TextField(controller: ctrl, decoration: const InputDecoration(hintText: 'Nhập tên nhóm')),
+                    backgroundColor: const Color(0xFF1E293B),
+                    title: const Text('Đặt Tên Nhóm', style: TextStyle(color: Colors.white)),
+                    content: TextField(
+                      controller: ctrl,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Nhập tên nhóm',
+                        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35)),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: LiquidGlassTheme.primaryAccent),
+                        ),
+                      ),
+                    ),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(c), child: const Text('Hủy')),
-                      TextButton(onPressed: () => Navigator.pop(c, ctrl.text), child: const Text('Tạo')),
+                      TextButton(onPressed: () => Navigator.pop(c), child: const Text('Hủy', style: TextStyle(color: Colors.white70))),
+                      TextButton(onPressed: () => Navigator.pop(c, ctrl.text), child: const Text('Tạo', style: TextStyle(color: LiquidGlassTheme.primaryAccent, fontWeight: FontWeight.bold))),
                     ],
                   );
-                }
+                },
               );
-              if (name != null) {
-                await provider.createGroup(name);
+              if (name != null && name.trim().isNotEmpty) {
+                await provider.createGroup(name.trim());
                 if (mounted) {
                   DynamicIslandNotification.show(
                     context,
                     title: 'Thành công',
-                    message: 'Đã tạo nhóm $name thành công!',
+                    message: 'Đã tạo nhóm ${name.trim()} thành công!',
                     type: NotificationType.success,
                   );
                 }
               }
             },
-            icon: const Icon(Icons.add),
-            label: const Text('Tạo Nhóm Mới'),
           ),
         ),
       ],
     );
   }
 }
+

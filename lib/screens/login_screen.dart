@@ -2,8 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:may_uikit/may_uikit.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/dynamic_island_notification.dart';
+import '../widgets/liquid_glass_app_bar.dart';
+import '../theme/liquid_glass_theme.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,17 +32,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _onPasswordChanged() {
     if (!_isLogin) {
-      // Ẩn lỗi ngay khi người dùng đang gõ
       if (!_passwordsMatch) {
         setState(() {
           _passwordsMatch = true;
         });
       }
 
-      // Hủy timer cũ nếu có
       if (_debounce?.isActive ?? false) _debounce!.cancel();
 
-      // Đặt timer mới (delay 800ms)
       _debounce = Timer(const Duration(milliseconds: 800), () {
         if (mounted) {
           setState(() {
@@ -78,7 +78,6 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // Nếu không chứa '@', coi như là Username và tự động thêm hậu tố để Firebase chấp nhận
     String finalEmail = emailOrUsername;
     if (!emailOrUsername.contains('@')) {
       finalEmail = '$emailOrUsername@toeic.app';
@@ -117,7 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
         message: _isLogin ? 'Đăng nhập thành công!' : 'Đăng ký tài khoản thành công!',
         type: NotificationType.success,
       );
-      Navigator.pop(context); // Quay lại sau khi đăng nhập thành công
+      Navigator.pop(context);
     }
   }
 
@@ -148,96 +147,136 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
+    final topPadding = LiquidGlassTheme.getAppBarContentTop(context, 12);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Tài khoản')),
-      body: authProvider.isLoading
+    return LiquidGlassScaffoldWrapper(
+      appBar: const LiquidGlassAppBar(title: 'Tài khoản'),
+      child: authProvider.isLoading
           ? const Center(child: SpinKitFadingCircle(color: Colors.white, size: 50.0))
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 40),
-                  Icon(Icons.lock_person_rounded, size: 80, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(height: 20),
-                  Text(
-                    _isLogin ? 'Đăng nhập' : 'Đăng ký',
-                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 40),
-                  TextField(
-                    controller: _emailController,
-                    decoration: InputDecoration(
-                      labelText: 'Email hoặc Username',
-                      prefixIcon: const Icon(Icons.person_outline_rounded),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              padding: EdgeInsets.fromLTRB(20, topPadding, 20, 40),
+              child: LiquidGlassContainer(
+                borderRadius: 24,
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 12),
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: LiquidGlassTheme.primaryAccent.withValues(alpha: 0.15),
+                          border: Border.all(color: LiquidGlassTheme.primaryAccent.withValues(alpha: 0.3)),
+                        ),
+                        child: const Icon(Icons.lock_person_rounded, size: 50, color: LiquidGlassTheme.primaryAccent),
+                      ),
                     ),
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _passwordController,
-                    decoration: InputDecoration(
-                      labelText: 'Mật khẩu',
-                      prefixIcon: const Icon(Icons.lock),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      errorText: !_passwordsMatch ? 'Mật khẩu không khớp' : null,
+                    const SizedBox(height: 16),
+                    Text(
+                      _isLogin ? 'Đăng nhập' : 'Đăng ký',
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                      textAlign: TextAlign.center,
                     ),
-                    obscureText: true,
-                  ),
-                  if (!_isLogin) ...[
+                    const SizedBox(height: 28),
+                    TextField(
+                      controller: _emailController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        labelText: 'Email hoặc Username',
+                        labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+                        prefixIcon: const Icon(Icons.person_outline_rounded, color: Colors.white70),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: LiquidGlassTheme.primaryAccent),
+                        ),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                    ),
                     const SizedBox(height: 16),
                     TextField(
-                      controller: _confirmPasswordController,
+                      controller: _passwordController,
+                      style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        labelText: 'Nhập lại mật khẩu',
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        labelText: 'Mật khẩu',
+                        labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+                        prefixIcon: const Icon(Icons.lock_outline_rounded, color: Colors.white70),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: LiquidGlassTheme.primaryAccent),
+                        ),
                         errorText: !_passwordsMatch ? 'Mật khẩu không khớp' : null,
                       ),
                       obscureText: true,
                     ),
-                  ],
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _submit,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: Text(_isLogin ? 'Đăng nhập' : 'Đăng ký', style: const TextStyle(fontSize: 16)),
-                  ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _isLogin = !_isLogin;
-                        _confirmPasswordController.clear();
-                      });
-                    },
-                    child: Text(_isLogin ? 'Chưa có tài khoản? Đăng ký ngay' : 'Đã có tài khoản? Đăng nhập'),
-                  ),
-                  const SizedBox(height: 24),
-                  const Row(
-                    children: [
-                      Expanded(child: Divider()),
-                      Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('HOẶC')),
-                      Expanded(child: Divider()),
+                    if (!_isLogin) ...[
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _confirmPasswordController,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'Nhập lại mật khẩu',
+                          labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+                          prefixIcon: const Icon(Icons.lock_reset_rounded, color: Colors.white70),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(color: LiquidGlassTheme.primaryAccent),
+                          ),
+                          errorText: !_passwordsMatch ? 'Mật khẩu không khớp' : null,
+                        ),
+                        obscureText: true,
+                      ),
                     ],
-                  ),
-                  const SizedBox(height: 24),
-                  OutlinedButton.icon(
-                    onPressed: _signInWithGoogle,
-                    icon: const Icon(Icons.g_mobiledata, size: 32),
-                    label: const Text('Tiếp tục với Google'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    const SizedBox(height: 24),
+                    GlassButtonV2(
+                      title: _isLogin ? 'Đăng nhập' : 'Đăng ký',
+                      onTap: _submit,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 14),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _isLogin = !_isLogin;
+                          _confirmPasswordController.clear();
+                        });
+                      },
+                      child: Text(
+                        _isLogin ? 'Chưa có tài khoản? Đăng ký ngay' : 'Đã có tài khoản? Đăng nhập',
+                        style: const TextStyle(color: LiquidGlassTheme.secondaryAccent),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.15))),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text('HOẶC', style: TextStyle(color: Colors.white.withValues(alpha: 0.45), fontSize: 12)),
+                        ),
+                        Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.15))),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    GlassButtonV2(
+                      title: 'Tiếp tục với Google',
+                      icon: const Icon(Icons.g_mobiledata_rounded, size: 28, color: Colors.white),
+                      onTap: _signInWithGoogle,
+                    ),
+                  ],
+                ),
               ),
             ),
     );

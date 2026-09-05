@@ -61,7 +61,9 @@ class _UserListScreenState extends State<UserListScreen> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 80),
+        padding: EdgeInsets.only(
+          bottom: LiquidGlassTheme.getFloatingButtonBottomPadding(context),
+        ),
         child: GlassButtonV2(
           title: 'Thêm hồ sơ',
           icon: const Icon(Icons.person_add_rounded, size: 20, color: Colors.white),

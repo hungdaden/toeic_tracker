@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:may_uikit/may_uikit.dart';
 import '../models/exam_model.dart';
 import 'exam_session_screen.dart';
+import '../widgets/liquid_glass_app_bar.dart';
+import '../theme/liquid_glass_theme.dart';
 
 class ExamListScreen extends StatelessWidget {
   const ExamListScreen({super.key});
@@ -17,32 +20,59 @@ class ExamListScreen extends StatelessWidget {
       ),
     ];
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Danh sách đề thi')),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
+    final topPadding = LiquidGlassTheme.getAppBarContentTop(context, 8);
+
+    return LiquidGlassScaffoldWrapper(
+      appBar: const LiquidGlassAppBar(title: 'Danh sách đề thi'),
+      child: ListView.builder(
+        padding: EdgeInsets.fromLTRB(16, topPadding, 16, 40),
         itemCount: exams.length,
         itemBuilder: (context, index) {
           final exam = exams[index];
-          return Card(
-            child: ListTile(
-              leading: const Icon(Icons.assignment, color: Colors.blue),
-              title: Text(
-                exam.title,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(exam.description ?? ''),
-              trailing: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ExamSessionScreen(exam: exam),
-                    ),
-                  );
-                },
-                child: const Text('Bắt đầu'),
-              ),
+          return LiquidGlassContainer(
+            margin: const EdgeInsets.only(bottom: 16),
+            borderRadius: 20,
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: LiquidGlassTheme.primaryAccent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(Icons.assignment_rounded, color: LiquidGlassTheme.primaryAccent, size: 28),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        exam.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        exam.description ?? '',
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                GlassButtonV2(
+                  title: 'Bắt đầu',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ExamSessionScreen(exam: exam),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
           );
         },

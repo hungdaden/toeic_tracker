@@ -123,6 +123,16 @@ class LiquidGlassTheme {
     final barHeight = customAppBarHeight ?? kToolbarHeight;
     return statusBar + barHeight + extraSpacing;
   }
+
+  /// Calculates the bottom padding needed for floating action buttons
+  /// so they sit comfortably above [FloatingBottomBarV2] with balanced breathing room.
+  static double getFloatingButtonBottomPadding(
+    BuildContext context, [
+    double extraOffset = 18.0,
+  ]) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    return bottomInset + 80.0 + extraOffset;
+  }
 }
 
 /// A full-screen ambient canvas that injects soft, glowing colorful orbs
