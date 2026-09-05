@@ -435,63 +435,129 @@ class _LiquidUserCardState extends State<_LiquidUserCard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                DateFormat('dd/MM/yyyy').format(score.date),
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                  color: Colors.white.withValues(alpha: 0.85),
-                ),
+              Row(
+                children: [
+                  Icon(
+                    Icons.event_note_rounded,
+                    size: 14,
+                    color: Colors.white.withValues(alpha: 0.6),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    DateFormat('dd/MM/yyyy').format(score.date),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: Colors.white.withValues(alpha: 0.85),
+                    ),
+                  ),
+                ],
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: LiquidGlassTheme.scoreTotal.withValues(alpha: 0.15),
+                  color: Colors.white.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: LiquidGlassTheme.scoreTotal.withValues(alpha: 0.4),
+                    color: Colors.white.withValues(alpha: 0.12),
                     width: 0.8,
                   ),
                 ),
                 child: Text(
-                  'Tổng: $total',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    color: LiquidGlassTheme.scoreTotal,
+                  isFourSkills ? '4 Kỹ năng' : '2 Kỹ năng',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withValues(alpha: 0.6),
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              LiquidGlassChip(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const gap = 8.0;
+
+              final totalChip = LiquidGlassChip(
+                label: 'Tổng',
+                value: '$total',
+                accentColor: LiquidGlassTheme.scoreTotal,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              );
+
+              final listeningChip = LiquidGlassChip(
                 label: 'Nghe',
                 value: '${score.listeningScore}',
                 accentColor: LiquidGlassTheme.scoreListening,
-              ),
-              LiquidGlassChip(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              );
+
+              final readingChip = LiquidGlassChip(
                 label: 'Đọc',
                 value: '${score.readingScore}',
                 accentColor: LiquidGlassTheme.scoreReading,
-              ),
-              if (isFourSkills) ...[
-                LiquidGlassChip(
-                  label: 'Nói',
-                  value: '${score.speakingScore ?? 0}',
-                  accentColor: LiquidGlassTheme.scoreSpeaking,
-                ),
-                LiquidGlassChip(
-                  label: 'Viết',
-                  value: '${score.writingScore ?? 0}',
-                  accentColor: LiquidGlassTheme.scoreWriting,
-                ),
-              ],
-            ],
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              );
+
+              if (!isFourSkills) {
+                return Row(
+                  children: [
+                    Expanded(child: listeningChip),
+                    const SizedBox(width: gap),
+                    Expanded(child: readingChip),
+                    const SizedBox(width: gap),
+                    Expanded(child: totalChip),
+                  ],
+                );
+              }
+
+              final speakingChip = LiquidGlassChip(
+                label: 'Nói',
+                value: '${score.speakingScore ?? 0}',
+                accentColor: LiquidGlassTheme.scoreSpeaking,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              );
+
+              final writingChip = LiquidGlassChip(
+                label: 'Viết',
+                value: '${score.writingScore ?? 0}',
+                accentColor: LiquidGlassTheme.scoreWriting,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              );
+
+              final itemWidth = (constraints.maxWidth - gap) / 2;
+
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: listeningChip),
+                      const SizedBox(width: gap),
+                      Expanded(child: readingChip),
+                    ],
+                  ),
+                  const SizedBox(height: gap),
+                  Row(
+                    children: [
+                      Expanded(child: speakingChip),
+                      const SizedBox(width: gap),
+                      Expanded(child: writingChip),
+                    ],
+                  ),
+                  const SizedBox(height: gap),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: itemWidth,
+                        child: totalChip,
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),

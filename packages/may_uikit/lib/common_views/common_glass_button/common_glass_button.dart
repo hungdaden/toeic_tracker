@@ -16,6 +16,7 @@ class GlassButtonV2 extends StatelessWidget {
     this.color,
     this.gradient,
     this.borderColor,
+    this.borderWidth,
     this.shadowColor,
     this.textColor,
   });
@@ -40,6 +41,9 @@ class GlassButtonV2 extends StatelessWidget {
 
   /// Border color.
   final Color? borderColor;
+
+  /// Border width.
+  final double? borderWidth;
 
   /// Shadow color.
   final Color? shadowColor;
@@ -96,6 +100,7 @@ class GlassButtonV2 extends StatelessWidget {
       color: effectiveColor,
       gradient: gradient,
       borderColor: effectiveBorderColor,
+      borderWidth: borderWidth ?? DimensV2.d1,
       shadowColor: effectiveShadowColor,
       pressedOffset: DimensV2.d4,
       child: buttonContent,

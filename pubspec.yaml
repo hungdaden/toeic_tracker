@@ -55,6 +55,7 @@ dependencies:
   firebase_messaging: ^16.2.0
   may_uikit:
     path: ./packages/may_uikit
+  font_awesome_flutter: ^11.0.0
 
   
 dev_dependencies:

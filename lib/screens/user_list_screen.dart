@@ -109,7 +109,7 @@ class _UserListScreenState extends State<UserListScreen> {
             controller: _scrollController,
             child: ListView.builder(
               controller: _scrollController,
-              padding: EdgeInsets.fromLTRB(16, topPadding, 16, 130),
+              padding: EdgeInsets.fromLTRB(16, topPadding, 16, 180),
               itemCount: provider.users.length,
               itemBuilder: (context, index) {
                 final user = provider.users[index];

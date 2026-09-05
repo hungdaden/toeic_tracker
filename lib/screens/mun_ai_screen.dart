@@ -5,6 +5,7 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:may_uikit/may_uikit.dart';
 import '../providers/user_provider.dart';
 import '../models/mun_ai_chat.dart';
@@ -269,7 +270,7 @@ class _MunAIScreenState extends State<MunAIScreen> {
                   ),
                 ],
               ),
-              child: const Icon(Icons.pets_rounded, size: 14, color: Colors.white),
+              child: const FaIcon(FontAwesomeIcons.cat, size: 14, color: Colors.white),
             ),
             const SizedBox(width: 8),
             const Text(
@@ -331,7 +332,7 @@ class _MunAIScreenState extends State<MunAIScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.pets_rounded, size: 14, color: LiquidGlassTheme.purpleAccent),
+                        const FaIcon(FontAwesomeIcons.cat, size: 14, color: LiquidGlassTheme.purpleAccent),
                         const SizedBox(width: 10),
                         const Text(
                           'Mun đang suy nghĩ...',
@@ -454,7 +455,7 @@ class _MunAIScreenState extends State<MunAIScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.pets_rounded, size: 12, color: LiquidGlassTheme.purpleAccent),
+                  const FaIcon(FontAwesomeIcons.cat, size: 12, color: LiquidGlassTheme.purpleAccent),
                   const SizedBox(width: 6),
                   Text(
                     'Mun AI',

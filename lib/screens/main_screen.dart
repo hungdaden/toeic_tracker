@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:may_uikit/may_uikit.dart';
 import 'dashboard_screen.dart';
 import 'leaderboard_screen.dart';
@@ -80,8 +81,8 @@ class _MainScreenState extends State<MainScreen> {
           ),
           FloatingBottomBarItemV2(
             title: 'Mun AI',
-            activeIcon: const Icon(Icons.pets_rounded, size: 20, color: Colors.white),
-            inactiveIcon: Icon(Icons.pets_rounded, size: 20, color: Colors.white.withValues(alpha: 0.55)),
+            activeIcon: const FaIcon(FontAwesomeIcons.cat, size: 20, color: Colors.white),
+            inactiveIcon: FaIcon(FontAwesomeIcons.cat, size: 20, color: Colors.white.withValues(alpha: 0.55)),
             activeBackgroundGradient: const LinearGradient(
               colors: [Color(0xFFA855F7), Color(0xFF7C3AED)],
             ),

@@ -217,7 +217,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     controller: _scrollController,
                     child: ListView.builder(
                       controller: _scrollController,
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 180),
                       itemCount: currentUser.scores.length + 1,
                       itemBuilder: (context, index) {
                         if (index == currentUser.scores.length) {
@@ -482,9 +482,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       title: 'Lộ trình',
                       icon: const Icon(Icons.auto_awesome_rounded, size: 16, color: Color(0xFFA5B4FC)),
                       color: const Color(0xFF23234D),
-                      borderColor: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                      borderColor: const Color(0xFF6366F1).withValues(alpha: 0.5),
+                      borderWidth: 1.0,
                       textColor: Colors.white,
-                      shadowColor: Colors.black.withValues(alpha: 0.35),
+                      shadowColor: Colors.transparent,
                       onTap: () {
                         Navigator.push(
                           context,
@@ -502,9 +503,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       title: 'Thi thử',
                       icon: const Icon(Icons.assignment_turned_in_rounded, size: 16, color: Color(0xFF7DD3FC)),
                       color: const Color(0xFF152A3D),
-                      borderColor: const Color(0xFF0284C7).withValues(alpha: 0.35),
+                      borderColor: const Color(0xFF0284C7).withValues(alpha: 0.5),
+                      borderWidth: 1.0,
                       textColor: Colors.white,
-                      shadowColor: Colors.black.withValues(alpha: 0.35),
+                      shadowColor: Colors.transparent,
                       onTap: () {
                         Navigator.push(
                           context,
@@ -515,6 +517,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 4),
             ],
           ),
           if (isViewingPast)

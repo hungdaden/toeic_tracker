@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -126,38 +127,44 @@ class LiquidGlassTheme {
   }
 
   /// Calculates the bottom padding needed for floating action buttons
-  /// so they sit closely (5-7px) above [FloatingBottomBarV2] without being obstructed.
+  /// so they float comfortably above [FloatingBottomBarV2] without being obstructed.
   static double getFloatingButtonBottomPadding(
     BuildContext context, [
     double extraOffset = 0.0,
   ]) {
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
-    final isIos = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    double hardwareBottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    if (hardwareBottomInset == 0) {
+      try {
+        final view = View.maybeOf(context);
+        if (view != null && view.devicePixelRatio > 0) {
+          hardwareBottomInset = view.viewPadding.bottom / view.devicePixelRatio;
+        }
+      } catch (_) {}
+    }
+
+    // Matches the platform condition in FloatingBottomBarV2: (!kIsWeb && Platform.isIOS)
+    final isIos = !kIsWeb && Platform.isIOS;
 
     final double basePadding;
     if (isIos) {
-      // In FloatingBottomBarV2 on iOS: bottom padding is fixed 24.0, height 56.0 -> top of bar is 80.0.
-      // Scaffold's endFloat places FAB at (bottomInset + 16.0).
-      // To place FAB bottom at exactly 86.0 (6px above bar):
-      // basePadding = 86.0 - (bottomInset + 16.0) = 70.0 - bottomInset.
-      // On iPhone (bottomInset = 34): 70 - 34 = 36.0.
-      // Total from screen bottom: 34 + 16 + 36 = 86.0 -> exactly 6px above bar (80.0).
-      basePadding = (70.0 - bottomInset).clamp(10.0, 70.0);
-    } else if (bottomInset > 0) {
-      // On Android with gesture nav: FloatingBottomBarV2 top is bottomInset + 12.0 + 56.0 = bottomInset + 68.0.
-      // Scaffold's endFloat places FAB at (bottomInset + 16.0).
-      // To place FAB bottom at (bottomInset + 74.0) (6px above bar):
-      // basePadding = (bottomInset + 74.0) - (bottomInset + 16.0) = 58.0.
-      basePadding = 58.0;
+      // FloatingBottomBarV2 on iOS has bottom padding 24.0, capsule ~86.0, top padding 20.0.
+      // Total bar top: 130.0 from screen bottom.
+      // Target button bottom at 138.0 (8px above bar, 28px above capsule):
+      // basePadding = 138.0 - 16.0 (Scaffold endFloat margin) = 122.0.
+      basePadding = 122.0;
+    } else if (hardwareBottomInset > 0) {
+      // On Android with navigation bar: FloatingBottomBarV2 has bottom padding = hardwareBottomInset + 12.0.
+      // Capsule height ~86.0, top padding 20.0 -> total bar top = hardwareBottomInset + 118.0.
+      // Target button bottom at hardwareBottomInset + 126.0 (8px above bar, 28px above capsule):
+      // basePadding = (hardwareBottomInset + 126.0) - 16.0 (Scaffold endFloat margin) = hardwareBottomInset + 110.0.
+      basePadding = hardwareBottomInset + 110.0;
     } else {
-      // No inset: top of bar is 80.0.
-      // Scaffold's endFloat places FAB at 16.0.
-      // To place FAB bottom at 86.0 (6px above bar):
-      // basePadding = 86.0 - 16.0 = 70.0.
-      basePadding = 70.0;
+      // No inset: total bar top is 130.0 from screen bottom.
+      // Target button bottom at 138.0 -> basePadding = 138.0 - 16.0 = 122.0.
+      basePadding = 122.0;
     }
 
-    return (basePadding + extraOffset).clamp(0.0, 120.0);
+    return (basePadding + extraOffset).clamp(0.0, 250.0);
   }
 }
 
@@ -379,6 +386,8 @@ class LiquidGlassChip extends StatelessWidget {
   final Color accentColor;
   final IconData? icon;
   final VoidCallback? onTap;
+  final EdgeInsetsGeometry? padding;
+  final double borderRadius;
 
   const LiquidGlassChip({
     super.key,
@@ -387,54 +396,62 @@ class LiquidGlassChip extends StatelessWidget {
     required this.accentColor,
     this.icon,
     this.onTap,
+    this.padding,
+    this.borderRadius = 14.0,
   });
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(borderRadius),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(borderRadius),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: padding ?? const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(borderRadius),
               color: accentColor.withValues(alpha: 0.12),
               border: Border.all(
                 color: accentColor.withValues(alpha: 0.35),
                 width: 1.0,
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (icon != null) ...[
-                  Icon(icon, size: 14, color: accentColor),
-                  const SizedBox(width: 6),
-                ],
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                if (value != null) ...[
-                  const SizedBox(width: 6),
-                  Text(
-                    value!,
-                    style: TextStyle(
-                      color: accentColor,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(icon, size: 14, color: accentColor),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                ],
-              ],
+                    if (value != null) ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        value!,
+                        style: TextStyle(
+                          color: accentColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
         ),
