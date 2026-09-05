@@ -7,6 +7,22 @@ enum NotificationType { success, error, info, warning }
 
 class DynamicIslandNotification {
   static OverlayEntry? _activeEntry;
+  static int _activeCount = 0;
+
+  static void _hideStatusBar() {
+    try {
+      SystemChrome.setEnabledSystemUIMode(
+        SystemUiMode.manual,
+        overlays: [SystemUiOverlay.bottom],
+      );
+    } catch (_) {}
+  }
+
+  static void _restoreStatusBar() {
+    try {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    } catch (_) {}
+  }
 
   static void show(
     BuildContext context, {
@@ -122,6 +138,10 @@ class _NotificationWidgetState extends State<_NotificationWidget>
       HapticFeedback.mediumImpact();
     } catch (_) {}
 
+    // Ẩn thanh trạng thái (đồng hồ, sóng, wifi) để Dynamic Island che trùm lên
+    DynamicIslandNotification._activeCount++;
+    DynamicIslandNotification._hideStatusBar();
+
     _controller.forward();
 
     _dismissTimer = Timer(widget.duration, () {
@@ -147,6 +167,11 @@ class _NotificationWidgetState extends State<_NotificationWidget>
     _dismissTimer?.cancel();
     _dismissTimer = null;
     _controller.dispose();
+    DynamicIslandNotification._activeCount =
+        (DynamicIslandNotification._activeCount - 1).clamp(0, 999);
+    if (DynamicIslandNotification._activeCount == 0) {
+      DynamicIslandNotification._restoreStatusBar();
+    }
     super.dispose();
   }
 
@@ -189,12 +214,21 @@ class _NotificationWidgetState extends State<_NotificationWidget>
     final double collapsedWidth = 140.0;
     final double collapsedHeight = rawTopInset > 0 ? rawTopInset * 0.75 : 28.0;
 
-    // Kích thước mở rộng: thu gọn khoảng 1/3 bề ngang (khoảng ~245px so với 370px trước đây)
-    final double expandedWidth = (screenWidth * 0.63).clamp(235.0, 255.0);
+    // Kích thước mở rộng: Tăng thêm 30% bề ngang (~320px so với 245px trước đây)
+    final double expandedWidth = (screenWidth * 0.82).clamp(310.0, 335.0);
     final double expandedHeight = rawTopInset > 0 ? rawTopInset + 48.0 : 60.0;
 
     // Khoảng đệm đỉnh giúp nội dung luôn nằm ở phần an toàn bên dưới tai thỏ
     final double contentTopPadding = rawTopInset > 0 ? rawTopInset + 2.0 : 10.0;
+
+    // 2 góc sát cạnh trên màn hình phẳng tuyệt đối (Radius.zero), không bo cong.
+    // 2 góc dưới bo cong tròn giọt nước Dynamic Island (30.0).
+    const BorderRadius islandBorderRadius = BorderRadius.only(
+      topLeft: Radius.zero,
+      topRight: Radius.zero,
+      bottomLeft: Radius.circular(30.0),
+      bottomRight: Radius.circular(30.0),
+    );
 
     return AnimatedBuilder(
       animation: _controller,
@@ -205,10 +239,6 @@ class _NotificationWidgetState extends State<_NotificationWidget>
         // Bung nở đàn hồi từ phôi tai thỏ
         final currentWidth = collapsedWidth + (expandedWidth - collapsedWidth) * progress;
         final currentHeight = collapsedHeight + (expandedHeight - collapsedHeight) * progress;
-
-        // Bo góc: đỉnh phẳng/bo nhẹ khớp bezel viền màn hình, đáy bo cong tròn giọt nước Dynamic Island
-        final double topCornerRadius = rawTopInset > 24 ? 12.0 : 26.0;
-        final double bottomCornerRadius = 30.0;
 
         final borderColor = Color.lerp(
           Colors.white.withValues(alpha: 0.12),
@@ -233,12 +263,7 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                 width: currentWidth,
                 height: currentHeight,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(topCornerRadius),
-                    topRight: Radius.circular(topCornerRadius),
-                    bottomLeft: Radius.circular(bottomCornerRadius),
-                    bottomRight: Radius.circular(bottomCornerRadius),
-                  ),
+                  borderRadius: islandBorderRadius,
                   boxShadow: [
                     // Deep ambient occlusion shadow tỏa êm xuống dưới, không tỏa ngược lên bezel
                     BoxShadow(
@@ -257,24 +282,14 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(topCornerRadius),
-                    topRight: Radius.circular(topCornerRadius),
-                    bottomLeft: Radius.circular(bottomCornerRadius),
-                    bottomRight: Radius.circular(bottomCornerRadius),
-                  ),
+                  borderRadius: islandBorderRadius,
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         // Nền màu ĐEN TUYỀN (pure OLED black) 100% để hòa lẫn hoàn toàn tai thỏ vật lý
                         color: Colors.black,
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(topCornerRadius),
-                          topRight: Radius.circular(topCornerRadius),
-                          bottomLeft: Radius.circular(bottomCornerRadius),
-                          bottomRight: Radius.circular(bottomCornerRadius),
-                        ),
+                        borderRadius: islandBorderRadius,
                         // BỎ VIỀN TRÊN CÙNG (top: BorderSide.none), chỉ giữ viền cạnh trái/phải và viền dưới
                         border: Border(
                           top: BorderSide.none,
@@ -296,8 +311,8 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                         padding: EdgeInsets.only(
                           top: contentTopPadding,
                           bottom: 8.0,
-                          left: 12.0,
-                          right: 12.0,
+                          left: 14.0,
+                          right: 14.0,
                         ),
                         child: Opacity(
                           opacity: _contentOpacityAnimation.value,
@@ -328,7 +343,7 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                                     child: Icon(icon, color: color, size: 16),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 10),
                                 // Title & message text block cân đối
                                 Expanded(
                                   child: Column(
@@ -341,7 +356,7 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.w700,
-                                          fontSize: 12.0,
+                                          fontSize: 12.5,
                                           letterSpacing: -0.2,
                                           shadows: [
                                             Shadow(
@@ -358,8 +373,8 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                                       Text(
                                         widget.message,
                                         style: TextStyle(
-                                          color: Colors.white.withValues(alpha: 0.82),
-                                          fontSize: 10.5,
+                                          color: Colors.white.withValues(alpha: 0.85),
+                                          fontSize: 11.0,
                                           height: 1.15,
                                         ),
                                         maxLines: 1,
@@ -368,11 +383,11 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                                     ],
                                   ),
                                 ),
-                                const SizedBox(width: 6),
+                                const SizedBox(width: 8),
                                 // Trailing glowing status dot
                                 Container(
-                                  width: 6,
-                                  height: 6,
+                                  width: 6.5,
+                                  height: 6.5,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: color,

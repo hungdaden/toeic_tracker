@@ -59,6 +59,30 @@ void main() {
     final Positioned positioned = tester.widget(positionedFinder);
     expect(positioned.top, equals(0.0));
 
+    // Verify top corners are flat (Radius.zero) and bottom corners are rounded (30.0)
+    final clipRRectFinder = find.ancestor(
+      of: find.byType(BackdropFilter),
+      matching: find.byType(ClipRRect),
+    );
+    expect(clipRRectFinder, findsOneWidget);
+    final ClipRRect clipRRect = tester.widget(clipRRectFinder);
+    final BorderRadius borderRadius = clipRRect.borderRadius as BorderRadius;
+    expect(borderRadius.topLeft, equals(Radius.zero));
+    expect(borderRadius.topRight, equals(Radius.zero));
+    expect(borderRadius.bottomLeft, equals(const Radius.circular(30.0)));
+    expect(borderRadius.bottomRight, equals(const Radius.circular(30.0)));
+
+    // Verify Container width is expanded by ~30% (~320px)
+    final containerFinder = find.ancestor(
+      of: clipRRectFinder,
+      matching: find.byType(Container),
+    );
+    expect(containerFinder, findsOneWidget);
+    final Container container = tester.widget(containerFinder);
+    expect(container.constraints?.minWidth ?? 0, greaterThanOrEqualTo(0));
+    final RenderBox containerBox = tester.renderObject(containerFinder);
+    expect(containerBox.size.width, greaterThan(310.0));
+
     // Verify content text is positioned safely below the notch (Y > 47.0)
     final RenderBox textRenderBox = tester.renderObject(find.text('Thành công'));
     final Offset textPosition = textRenderBox.localToGlobal(Offset.zero);
