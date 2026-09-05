@@ -21,6 +21,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   late int _currentIndex;
+  late PageController _pageController;
 
   final List<Widget> _pages = [
     const HomeScreen(),
@@ -30,10 +31,23 @@ class _MainScreenState extends State<MainScreen> {
     const UserListScreen(),
   ];
 
+  // Quản lý cử chỉ vuốt ngang từ mép màn hình (Edge Swipe)
+  double? _edgeStartX;
+  double? _edgeStartY;
+  bool _isLeftEdge = false;
+  bool _isRightEdge = false;
+
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   void _onTabSelected(int index) {
@@ -47,9 +61,72 @@ class _MainScreenState extends State<MainScreen> {
         return;
       }
     }
-    setState(() {
-      _currentIndex = index;
-    });
+    if (index != _currentIndex) {
+      HapticUtil.lightImpact();
+      setState(() {
+        _currentIndex = index;
+      });
+      if (_pageController.hasClients) {
+        _pageController.animateToPage(
+          index,
+          duration: const Duration(milliseconds: 320),
+          curve: Curves.easeOutCubic,
+        );
+      }
+    }
+  }
+
+  void _handleEdgePointerDown(PointerDownEvent event, double screenWidth) {
+    const edgeThreshold = 48.0; // Vùng cảm ứng mép 48px từ viền trái/phải màn hình
+    if (event.position.dx <= edgeThreshold) {
+      _edgeStartX = event.position.dx;
+      _edgeStartY = event.position.dy;
+      _isLeftEdge = true;
+      _isRightEdge = false;
+    } else if (event.position.dx >= screenWidth - edgeThreshold) {
+      _edgeStartX = event.position.dx;
+      _edgeStartY = event.position.dy;
+      _isRightEdge = true;
+      _isLeftEdge = false;
+    } else {
+      _edgeStartX = null;
+      _edgeStartY = null;
+      _isLeftEdge = false;
+      _isRightEdge = false;
+    }
+  }
+
+  void _handleEdgePointerUp(PointerUpEvent event) {
+    if (_edgeStartX != null && _edgeStartY != null) {
+      final deltaX = event.position.dx - _edgeStartX!;
+      final deltaY = (event.position.dy - _edgeStartY!).abs();
+
+      // Đảm bảo cử chỉ vuốt ngang chiếm ưu thế so với cuộn dọc và vượt ngưỡng kích hoạt
+      if (deltaX.abs() > 40.0 && deltaX.abs() > deltaY * 1.1) {
+        if (_isLeftEdge && deltaX > 40.0) {
+          // Vuốt từ mép trái sang phải -> Chuyển về màn hình trước đó
+          if (_currentIndex > 0) {
+            _onTabSelected(_currentIndex - 1);
+          }
+        } else if (_isRightEdge && deltaX < -40.0) {
+          // Vuốt từ mép phải sang trái -> Chuyển sang màn hình tiếp theo
+          if (_currentIndex < _pages.length - 1) {
+            _onTabSelected(_currentIndex + 1);
+          }
+        }
+      }
+    }
+    _edgeStartX = null;
+    _edgeStartY = null;
+    _isLeftEdge = false;
+    _isRightEdge = false;
+  }
+
+  void _handleEdgePointerCancel(PointerCancelEvent event) {
+    _edgeStartX = null;
+    _edgeStartY = null;
+    _isLeftEdge = false;
+    _isRightEdge = false;
   }
 
   @override
@@ -57,9 +134,21 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       backgroundColor: LiquidGlassTheme.background,
       extendBody: true,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final screenWidth = constraints.maxWidth;
+          return Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: (event) => _handleEdgePointerDown(event, screenWidth),
+            onPointerUp: _handleEdgePointerUp,
+            onPointerCancel: _handleEdgePointerCancel,
+            child: PageView(
+              controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(),
+              children: _pages,
+            ),
+          );
+        },
       ),
       bottomNavigationBar: FloatingBottomBarV2(
         currentIndex: _currentIndex,

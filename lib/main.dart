@@ -120,6 +120,27 @@ class _ToeicTrackerAppState extends State<ToeicTrackerApp> {
       title: 'TOEIC Tracker',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
+      builder: (context, child) {
+        return Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (event) {
+            try {
+              final currentFocus = FocusManager.instance.primaryFocus;
+              if (currentFocus != null && currentFocus.context != null) {
+                final renderObject = currentFocus.context!.findRenderObject();
+                if (renderObject is RenderBox && renderObject.hasSize) {
+                  final pos = renderObject.localToGlobal(Offset.zero);
+                  final bounds = pos & renderObject.size;
+                  if (!bounds.contains(event.position)) {
+                    currentFocus.unfocus();
+                  }
+                }
+              }
+            } catch (_) {}
+          },
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: _isMaintenance ? const MaintenanceScreen() : const MainScreen(),
     );
   }
