@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// Apple iOS Liquid Glass Theme Tokens and Utilities
@@ -131,8 +132,22 @@ class LiquidGlassTheme {
     double extraOffset = 0.0,
   ]) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    final baseOffset = bottomInset > 0 ? (bottomInset + 58.0) : 68.0;
-    return baseOffset + extraOffset;
+    final isIos = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
+    final double basePadding;
+    if (isIos) {
+      // FloatingBottomBarV2 on iOS has fixed bottom padding 24.0, height 56.0 -> top of bar is 80.0.
+      // FloatingActionButtonLocation.endFloat adds 16.0 margin -> 16 + 66 = 82 (2px above bar).
+      basePadding = 66.0;
+    } else if (bottomInset > 0) {
+      // FloatingBottomBarV2 on Android has bottomInset + 12.0 padding, height 56.0 -> top is bottomInset + 68.0.
+      // 16 + bottomInset + 54 = bottomInset + 70 (2px above bar).
+      basePadding = bottomInset + 54.0;
+    } else {
+      // No inset: top is 80.0 -> 16 + 66 = 82 (2px above bar).
+      basePadding = 66.0;
+    }
+    return basePadding + extraOffset;
   }
 }
 

@@ -132,7 +132,7 @@ class HomeScreen extends StatelessWidget {
           }
 
           final scrollController = ScrollController();
-          final topPadding = LiquidGlassTheme.getAppBarContentTop(context, -6);
+          final topPadding = LiquidGlassTheme.getAppBarContentTop(context, -18);
 
           return CommonScrollbarWithIosStatusBarTapDetectorV2(
             controller: scrollController,
@@ -149,7 +149,7 @@ class HomeScreen extends StatelessWidget {
                   children: [
                     if (index == 0)
                       Padding(
-                        padding: const EdgeInsets.only(left: 4, bottom: 6),
+                        padding: const EdgeInsets.only(left: 4, bottom: 4),
                         child: Text(
                           'HỒ SƠ CỦA BẠN',
                           style: TextStyle(
