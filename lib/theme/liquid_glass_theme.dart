@@ -125,13 +125,14 @@ class LiquidGlassTheme {
   }
 
   /// Calculates the bottom padding needed for floating action buttons
-  /// so they sit comfortably above [FloatingBottomBarV2] with balanced breathing room.
+  /// so they sit closely above [FloatingBottomBarV2] without being obstructed.
   static double getFloatingButtonBottomPadding(
     BuildContext context, [
-    double extraOffset = 18.0,
+    double extraOffset = 0.0,
   ]) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    return bottomInset + 80.0 + extraOffset;
+    final baseOffset = bottomInset > 0 ? (bottomInset + 58.0) : 68.0;
+    return baseOffset + extraOffset;
   }
 }
 
