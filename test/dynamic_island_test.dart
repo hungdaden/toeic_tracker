@@ -69,8 +69,8 @@ void main() {
     final BorderRadius borderRadius = clipRRect.borderRadius as BorderRadius;
     expect(borderRadius.topLeft, equals(Radius.zero));
     expect(borderRadius.topRight, equals(Radius.zero));
-    expect(borderRadius.bottomLeft, equals(const Radius.circular(24.0)));
-    expect(borderRadius.bottomRight, equals(const Radius.circular(24.0)));
+    expect(borderRadius.bottomLeft, equals(const Radius.circular(26.0)));
+    expect(borderRadius.bottomRight, equals(const Radius.circular(26.0)));
 
     // Verify Container width is expanded by ~30% (~320px)
     final containerFinder = find.ancestor(

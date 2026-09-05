@@ -216,19 +216,19 @@ class _NotificationWidgetState extends State<_NotificationWidget>
 
     // Kích thước mở rộng: Tăng thêm 30% bề ngang (~320px so với 245px trước đây)
     final double expandedWidth = (screenWidth * 0.82).clamp(310.0, 335.0);
-    // Tối ưu diện tích: Thu gọn chiều cao ôm sát mép dưới tai thỏ (~36px bên dưới notch thay vì 48px)
-    final double expandedHeight = rawTopInset > 0 ? rawTopInset + 36.0 : 48.0;
+    // Tối ưu diện tích: Gia tăng khoảng cách hiển thị hợp lý (~43px bên dưới notch) để không bị chật chội
+    final double expandedHeight = rawTopInset > 0 ? rawTopInset + 43.0 : 54.0;
 
-    // Khoảng đệm đỉnh: Đặt nội dung nằm sát mép dưới tai thỏ để tối ưu diện tích
-    final double contentTopPadding = rawTopInset > 0 ? rawTopInset : 4.0;
+    // Khoảng đệm đỉnh: Đặt nội dung nằm sát mép dưới tai thỏ
+    final double contentTopPadding = rawTopInset > 0 ? rawTopInset + 1.0 : 6.0;
 
     // 2 góc sát cạnh trên màn hình phẳng tuyệt đối (Radius.zero), không bo cong.
-    // 2 góc dưới bo cong tròn giọt nước Dynamic Island (24.0) hài hòa với chiều cao mới.
+    // 2 góc dưới bo cong tròn giọt nước Dynamic Island (26.0) hài hòa với chiều cao mới.
     const BorderRadius islandBorderRadius = BorderRadius.only(
       topLeft: Radius.zero,
       topRight: Radius.zero,
-      bottomLeft: Radius.circular(24.0),
-      bottomRight: Radius.circular(24.0),
+      bottomLeft: Radius.circular(26.0),
+      bottomRight: Radius.circular(26.0),
     );
 
     return AnimatedBuilder(
@@ -311,7 +311,7 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                       child: Padding(
                         padding: EdgeInsets.only(
                           top: contentTopPadding,
-                          bottom: 2.0,
+                          bottom: 7.0,
                           left: 14.0,
                           right: 14.0,
                         ),
