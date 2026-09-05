@@ -126,7 +126,7 @@ class LiquidGlassTheme {
   }
 
   /// Calculates the bottom padding needed for floating action buttons
-  /// so they sit closely above [FloatingBottomBarV2] without being obstructed.
+  /// so they sit closely (5-7px) above [FloatingBottomBarV2] without being obstructed.
   static double getFloatingButtonBottomPadding(
     BuildContext context, [
     double extraOffset = 0.0,
@@ -136,18 +136,28 @@ class LiquidGlassTheme {
 
     final double basePadding;
     if (isIos) {
-      // FloatingBottomBarV2 on iOS has fixed bottom padding 24.0, height 56.0 -> top of bar is 80.0.
-      // FloatingActionButtonLocation.endFloat adds 16.0 margin -> 16 + 66 = 82 (2px above bar).
-      basePadding = 66.0;
+      // In FloatingBottomBarV2 on iOS: bottom padding is fixed 24.0, height 56.0 -> top of bar is 80.0.
+      // Scaffold's endFloat places FAB at (bottomInset + 16.0).
+      // To place FAB bottom at exactly 86.0 (6px above bar):
+      // basePadding = 86.0 - (bottomInset + 16.0) = 70.0 - bottomInset.
+      // On iPhone (bottomInset = 34): 70 - 34 = 36.0.
+      // Total from screen bottom: 34 + 16 + 36 = 86.0 -> exactly 6px above bar (80.0).
+      basePadding = (70.0 - bottomInset).clamp(10.0, 70.0);
     } else if (bottomInset > 0) {
-      // FloatingBottomBarV2 on Android has bottomInset + 12.0 padding, height 56.0 -> top is bottomInset + 68.0.
-      // 16 + bottomInset + 54 = bottomInset + 70 (2px above bar).
-      basePadding = bottomInset + 54.0;
+      // On Android with gesture nav: FloatingBottomBarV2 top is bottomInset + 12.0 + 56.0 = bottomInset + 68.0.
+      // Scaffold's endFloat places FAB at (bottomInset + 16.0).
+      // To place FAB bottom at (bottomInset + 74.0) (6px above bar):
+      // basePadding = (bottomInset + 74.0) - (bottomInset + 16.0) = 58.0.
+      basePadding = 58.0;
     } else {
-      // No inset: top is 80.0 -> 16 + 66 = 82 (2px above bar).
-      basePadding = 66.0;
+      // No inset: top of bar is 80.0.
+      // Scaffold's endFloat places FAB at 16.0.
+      // To place FAB bottom at 86.0 (6px above bar):
+      // basePadding = 86.0 - 16.0 = 70.0.
+      basePadding = 70.0;
     }
-    return basePadding + extraOffset;
+
+    return (basePadding + extraOffset).clamp(0.0, 120.0);
   }
 }
 

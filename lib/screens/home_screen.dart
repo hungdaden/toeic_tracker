@@ -132,7 +132,7 @@ class HomeScreen extends StatelessWidget {
           }
 
           final scrollController = ScrollController();
-          final topPadding = LiquidGlassTheme.getAppBarContentTop(context, -18);
+          final topPadding = LiquidGlassTheme.getAppBarContentTop(context, -32);
 
           return CommonScrollbarWithIosStatusBarTapDetectorV2(
             controller: scrollController,
@@ -210,7 +210,7 @@ class _LiquidUserCardState extends State<_LiquidUserCard> {
     return PressableCardContainerV2(
       margin: const EdgeInsets.only(bottom: 16),
       borderRadius: 24,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       color: const Color(0xFF111827),
       borderColor: Colors.white.withValues(alpha: 0.1),
       borderWidth: 1.0,
