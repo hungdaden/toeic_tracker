@@ -103,7 +103,7 @@ class _UserListScreenState extends State<UserListScreen> {
 
           final currentUserId = provider.currentUser?.id;
 
-          final topPadding = LiquidGlassTheme.getAppBarContentTop(context, 12);
+          final topPadding = LiquidGlassTheme.getAppBarContentTop(context, 4);
 
           return CommonScrollbarWithIosStatusBarTapDetectorV2(
             controller: _scrollController,
