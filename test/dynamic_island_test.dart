@@ -69,8 +69,8 @@ void main() {
     final BorderRadius borderRadius = clipRRect.borderRadius as BorderRadius;
     expect(borderRadius.topLeft, equals(Radius.zero));
     expect(borderRadius.topRight, equals(Radius.zero));
-    expect(borderRadius.bottomLeft, equals(const Radius.circular(30.0)));
-    expect(borderRadius.bottomRight, equals(const Radius.circular(30.0)));
+    expect(borderRadius.bottomLeft, equals(const Radius.circular(24.0)));
+    expect(borderRadius.bottomRight, equals(const Radius.circular(24.0)));
 
     // Verify Container width is expanded by ~30% (~320px)
     final containerFinder = find.ancestor(
@@ -82,6 +82,10 @@ void main() {
     expect(container.constraints?.minWidth ?? 0, greaterThanOrEqualTo(0));
     final RenderBox containerBox = tester.renderObject(containerFinder);
     expect(containerBox.size.width, greaterThan(310.0));
+
+    // Verify Title text is centered
+    final Text titleWidget = tester.widget(find.text('Thành công'));
+    expect(titleWidget.textAlign, equals(TextAlign.center));
 
     // Verify content text is positioned safely below the notch (Y > 47.0)
     final RenderBox textRenderBox = tester.renderObject(find.text('Thành công'));
