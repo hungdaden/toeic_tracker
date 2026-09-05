@@ -79,9 +79,9 @@ class _NotificationWidget extends StatefulWidget {
 class _NotificationWidgetState extends State<_NotificationWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _expandAnimation;
+  late Animation<double> _bloomAnimation;
   late Animation<double> _contentOpacityAnimation;
-  late Animation<double> _contentSlideAnimation;
+  late Animation<double> _contentScaleAnimation;
   Timer? _dismissTimer;
   bool _isDismissing = false;
 
@@ -90,35 +90,36 @@ class _NotificationWidgetState extends State<_NotificationWidget>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 550),
-      reverseDuration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 580),
+      reverseDuration: const Duration(milliseconds: 280),
     );
 
-    // Apple fluid spring ease curve for organic morphing from the notch
-    _expandAnimation = CurvedAnimation(
+    // Đường cong Bung Nở Đàn Hồi (Apple Spring Overshoot):
+    // Phôi tai thỏ giãn nở nhẹ quá đà (~1.08x) rồi nảy nhịp nhẹ về kích thước chuẩn
+    _bloomAnimation = CurvedAnimation(
       parent: _controller,
-      curve: const Cubic(0.16, 1.0, 0.3, 1.0),
+      curve: const Cubic(0.34, 1.56, 0.64, 1.0),
       reverseCurve: Curves.easeInCubic,
     );
 
-    // Content smoothly fades in and slightly floats up as the island expands
+    // Nội dung bên trong mờ hiện và phóng nhẹ từ lõi viên thuốc
     _contentOpacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.35, 0.90, curve: Curves.easeOut),
-        reverseCurve: const Interval(0.55, 1.0, curve: Curves.easeIn),
+        curve: const Interval(0.38, 0.85, curve: Curves.easeIn),
+        reverseCurve: const Interval(0.55, 1.0, curve: Curves.easeOut),
       ),
     );
 
-    _contentSlideAnimation = Tween<double>(begin: 6.0, end: 0.0).animate(
+    _contentScaleAnimation = Tween<double>(begin: 0.75, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.35, 0.90, curve: Curves.easeOutCubic),
+        curve: const Interval(0.38, 0.95, curve: Curves.easeOutBack),
       ),
     );
 
     try {
-      HapticFeedback.lightImpact();
+      HapticFeedback.mediumImpact();
     } catch (_) {}
 
     _controller.forward();
@@ -184,13 +185,13 @@ class _NotificationWidgetState extends State<_NotificationWidget>
     final double rawTopInset = MediaQuery.paddingOf(context).top;
     final double screenWidth = MediaQuery.sizeOf(context).width;
 
-    // Kích thước ban đầu xuất phát từ chính kích thước tai thỏ (t=0)
+    // Phôi ban đầu: đúng khuôn notch vật lý của iPhone 12 (width: 140, height: ~34px)
     final double collapsedWidth = 140.0;
-    final double collapsedHeight = rawTopInset > 0 ? rawTopInset : 34.0;
+    final double collapsedHeight = rawTopInset > 0 ? rawTopInset * 0.75 : 28.0;
 
-    // Kích thước mở rộng: bám chặt từ đỉnh màn hình top: 0 và bung nở che trọn tai thỏ
-    final double expandedWidth = (screenWidth - 20.0).clamp(280.0, 420.0);
-    final double expandedHeight = rawTopInset > 0 ? rawTopInset + 54.0 : 66.0;
+    // Kích thước mở rộng: thu gọn khoảng 1/3 bề ngang (khoảng ~245px so với 370px trước đây)
+    final double expandedWidth = (screenWidth * 0.63).clamp(235.0, 255.0);
+    final double expandedHeight = rawTopInset > 0 ? rawTopInset + 48.0 : 60.0;
 
     // Khoảng đệm đỉnh giúp nội dung luôn nằm ở phần an toàn bên dưới tai thỏ
     final double contentTopPadding = rawTopInset > 0 ? rawTopInset + 2.0 : 10.0;
@@ -198,13 +199,22 @@ class _NotificationWidgetState extends State<_NotificationWidget>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        final progress = _expandAnimation.value.clamp(0.0, 1.0);
-        final currentWidth = lerpDouble(collapsedWidth, expandedWidth, progress)!;
-        final currentHeight = lerpDouble(collapsedHeight, expandedHeight, progress)!;
+        final progress = _bloomAnimation.value;
+        final clampedProgress = progress.clamp(0.0, 1.0);
 
-        // Bo góc: đỉnh khớp bezel viền máy, đáy bo cong tròn giọt nước Dynamic Island
-        final double topCornerRadius = rawTopInset > 24 ? 14.0 : 28.0;
-        final double bottomCornerRadius = 32.0;
+        // Bung nở đàn hồi từ phôi tai thỏ
+        final currentWidth = collapsedWidth + (expandedWidth - collapsedWidth) * progress;
+        final currentHeight = collapsedHeight + (expandedHeight - collapsedHeight) * progress;
+
+        // Bo góc: đỉnh phẳng/bo nhẹ khớp bezel viền màn hình, đáy bo cong tròn giọt nước Dynamic Island
+        final double topCornerRadius = rawTopInset > 24 ? 12.0 : 26.0;
+        final double bottomCornerRadius = 30.0;
+
+        final borderColor = Color.lerp(
+          Colors.white.withValues(alpha: 0.12),
+          color.withValues(alpha: 0.40),
+          clampedProgress,
+        )!;
 
         return Positioned(
           top: 0.0,
@@ -230,25 +240,19 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                     bottomRight: Radius.circular(bottomCornerRadius),
                   ),
                   boxShadow: [
-                    // Deep ambient occlusion shadow nở êm theo progress (tránh giật bóng khi mới hiện)
+                    // Deep ambient occlusion shadow tỏa êm xuống dưới, không tỏa ngược lên bezel
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.55 * progress),
-                      blurRadius: 28,
-                      spreadRadius: 1,
-                      offset: const Offset(0, 10),
+                      color: Colors.black.withValues(alpha: 0.58 * clampedProgress),
+                      blurRadius: 24,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 8),
                     ),
                     // Hào quang màu trạng thái nở êm theo progress
                     BoxShadow(
-                      color: color.withValues(alpha: 0.28 * progress),
-                      blurRadius: 22,
-                      spreadRadius: 1,
+                      color: color.withValues(alpha: 0.30 * clampedProgress),
+                      blurRadius: 18,
+                      spreadRadius: 0,
                       offset: const Offset(0, 4),
-                    ),
-                    // Specular rim light nhẹ
-                    BoxShadow(
-                      color: Colors.white.withValues(alpha: 0.08 * progress),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
                     ),
                   ],
                 ),
@@ -271,34 +275,41 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                           bottomLeft: Radius.circular(bottomCornerRadius),
                           bottomRight: Radius.circular(bottomCornerRadius),
                         ),
-                        // Viền specular ánh kim kính mờ tinh tế định hình viên thuốc
-                        border: Border.all(
-                          color: Color.lerp(
-                            Colors.white.withValues(alpha: 0.14),
-                            color.withValues(alpha: 0.40),
-                            progress,
-                          )!,
-                          width: 0.8,
+                        // BỎ VIỀN TRÊN CÙNG (top: BorderSide.none), chỉ giữ viền cạnh trái/phải và viền dưới
+                        border: Border(
+                          top: BorderSide.none,
+                          left: BorderSide(
+                            color: borderColor.withValues(alpha: borderColor.a * clampedProgress),
+                            width: 0.8,
+                          ),
+                          right: BorderSide(
+                            color: borderColor.withValues(alpha: borderColor.a * clampedProgress),
+                            width: 0.8,
+                          ),
+                          bottom: BorderSide(
+                            color: borderColor.withValues(alpha: borderColor.a * clampedProgress),
+                            width: 0.8,
+                          ),
                         ),
                       ),
                       child: Padding(
                         padding: EdgeInsets.only(
                           top: contentTopPadding,
-                          bottom: 10.0,
-                          left: 14.0,
-                          right: 14.0,
+                          bottom: 8.0,
+                          left: 12.0,
+                          right: 12.0,
                         ),
                         child: Opacity(
                           opacity: _contentOpacityAnimation.value,
-                          child: Transform.translate(
-                            offset: Offset(0.0, _contentSlideAnimation.value),
+                          child: Transform.scale(
+                            scale: _contentScaleAnimation.value,
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                // Leading glass icon chip
+                                // Leading glass icon chip nhỏ gọn
                                 Container(
-                                  width: 34.0,
-                                  height: 34.0,
+                                  width: 28.0,
+                                  height: 28.0,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: color.withValues(alpha: 0.18),
@@ -309,16 +320,16 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                                     boxShadow: [
                                       BoxShadow(
                                         color: color.withValues(alpha: 0.30),
-                                        blurRadius: 8,
+                                        blurRadius: 6,
                                       ),
                                     ],
                                   ),
                                   child: Center(
-                                    child: Icon(icon, color: color, size: 19),
+                                    child: Icon(icon, color: color, size: 16),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                // Title & message text block
+                                const SizedBox(width: 8),
+                                // Title & message text block cân đối
                                 Expanded(
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -330,7 +341,7 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.w700,
-                                          fontSize: 13,
+                                          fontSize: 12.0,
                                           letterSpacing: -0.2,
                                           shadows: [
                                             Shadow(
@@ -343,13 +354,13 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
-                                      const SizedBox(height: 2),
+                                      const SizedBox(height: 1),
                                       Text(
                                         widget.message,
                                         style: TextStyle(
                                           color: Colors.white.withValues(alpha: 0.82),
-                                          fontSize: 11.5,
-                                          height: 1.2,
+                                          fontSize: 10.5,
+                                          height: 1.15,
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
@@ -357,37 +368,18 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                                     ],
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                // Trailing pulsing indicator badge
+                                const SizedBox(width: 6),
+                                // Trailing glowing status dot
                                 Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
+                                  width: 6,
+                                  height: 6,
                                   decoration: BoxDecoration(
-                                    color: color.withValues(alpha: 0.14),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: color.withValues(alpha: 0.32),
-                                      width: 0.8,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        width: 6,
-                                        height: 6,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: color,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: color.withValues(alpha: 0.7),
-                                              blurRadius: 4,
-                                            ),
-                                          ],
-                                        ),
+                                    shape: BoxShape.circle,
+                                    color: color,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: color.withValues(alpha: 0.85),
+                                        blurRadius: 5,
                                       ),
                                     ],
                                   ),
