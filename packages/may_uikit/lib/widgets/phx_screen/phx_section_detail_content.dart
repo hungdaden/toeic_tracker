@@ -211,8 +211,9 @@ class PHXSectionDetailContentV2 extends StatelessWidget {
   ) {
     return Text(
       htmlContent,
-      style: AppTextStylesV2.bodyRegular.copyWith(
-        color: AppColorsV2.neutral700,
+      style: const TextStyle(
+        fontSize: 14,
+        color: Colors.black87,
       ),
     );
   }
