@@ -8,6 +8,7 @@ import '../models/user_model.dart';
 import '../models/toeic_score.dart';
 import 'login_screen.dart';
 import '../widgets/notification_bell.dart';
+import '../widgets/liquid_glass_app_bar.dart';
 import '../theme/liquid_glass_theme.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -94,11 +95,10 @@ class HomeScreen extends StatelessWidget {
     }
 
     return LiquidGlassScaffoldWrapper(
-      appBar: AppBar(
-        title: const Text('Tổng Quan Học Tập'),
-        actions: const [
+      appBar: const LiquidGlassAppBar(
+        title: 'Tổng Quan Học Tập',
+        actions: [
           NotificationBell(),
-          SizedBox(width: 8),
         ],
       ),
       child: Consumer<UserProvider>(
@@ -128,12 +128,13 @@ class HomeScreen extends StatelessWidget {
           }
 
           final scrollController = ScrollController();
+          final topPadding = LiquidGlassTheme.getAppBarContentTop(context, 12);
 
           return CommonScrollbarWithIosStatusBarTapDetectorV2(
             controller: scrollController,
             child: ListView.builder(
               controller: scrollController,
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+              padding: EdgeInsets.fromLTRB(16, topPadding, 16, 120),
               itemCount: displayList.length,
               itemBuilder: (context, index) {
                 final user = displayList[index];

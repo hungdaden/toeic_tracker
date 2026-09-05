@@ -9,6 +9,7 @@ import 'package:may_uikit/may_uikit.dart';
 import '../providers/user_provider.dart';
 import '../models/mun_ai_chat.dart';
 import '../models/toeic_score.dart';
+import '../widgets/liquid_glass_app_bar.dart';
 import '../theme/liquid_glass_theme.dart';
 
 class MunAIScreen extends StatefulWidget {
@@ -247,9 +248,11 @@ class _MunAIScreenState extends State<MunAIScreen> {
       );
     }
 
+    final topPadding = LiquidGlassTheme.getAppBarContentTop(context, 12);
+
     return LiquidGlassScaffoldWrapper(
-      appBar: AppBar(
-        title: Row(
+      appBar: LiquidGlassAppBar(
+        titleWidget: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
@@ -269,23 +272,28 @@ class _MunAIScreenState extends State<MunAIScreen> {
               child: const Icon(Icons.pets_rounded, size: 14, color: Colors.white),
             ),
             const SizedBox(width: 8),
-            const Text('Mun AI Trợ Lý'),
+            const Text(
+              'Mun AI Trợ Lý',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white),
+            ),
           ],
         ),
-        leading: IconButton(
+        leading: LiquidGlassAppBarAction(
+          size: 38,
           icon: Icon(
             _isSidebarOpen ? Icons.menu_open_rounded : Icons.menu_rounded,
             color: Colors.white,
+            size: 20,
           ),
-          onPressed: () => setState(() => _isSidebarOpen = !_isSidebarOpen),
+          onTap: () => setState(() => _isSidebarOpen = !_isSidebarOpen),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add_comment_rounded, color: Colors.white),
+          LiquidGlassAppBarAction(
+            size: 38,
+            icon: const Icon(Icons.add_comment_rounded, color: Colors.white, size: 19),
             tooltip: 'Đoạn chat mới',
-            onPressed: _createNewSession,
+            onTap: _createNewSession,
           ),
-          const SizedBox(width: 4),
         ],
       ),
       child: Stack(
@@ -298,7 +306,7 @@ class _MunAIScreenState extends State<MunAIScreen> {
                   controller: _scrollController,
                   child: ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                    padding: EdgeInsets.fromLTRB(16, topPadding, 16, 16),
                     itemCount: _currentSession!.messages.length,
                     itemBuilder: (context, index) {
                       final msg = _currentSession!.messages[index];
@@ -382,7 +390,7 @@ class _MunAIScreenState extends State<MunAIScreen> {
           if (_isSidebarOpen)
             Positioned(
               left: 0,
-              top: 0,
+              top: MediaQuery.paddingOf(context).top + 8,
               bottom: 100,
               width: 280,
               child: LiquidGlassContainer(

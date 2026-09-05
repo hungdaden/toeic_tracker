@@ -5,6 +5,7 @@ import 'package:may_uikit/may_uikit.dart';
 import '../providers/user_provider.dart';
 import '../models/user_model.dart';
 import '../widgets/group_dialog.dart';
+import '../widgets/liquid_glass_app_bar.dart';
 import '../theme/liquid_glass_theme.dart';
 
 class LeaderboardScreen extends StatefulWidget {
@@ -45,98 +46,106 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       ),
     );
 
+    final appBarHeight = isInGroup ? (kToolbarHeight + 56.0) : kToolbarHeight;
+    final topPadding = LiquidGlassTheme.getAppBarContentTop(context, 12, appBarHeight);
+
     return LiquidGlassScaffoldWrapper(
-      appBar: AppBar(
-        title: Text(effectiveMode ? 'Bảng Vàng Nhóm' : 'Bảng Vàng Cá Nhân'),
+      appBar: LiquidGlassAppBar(
+        title: effectiveMode ? 'Bảng Vàng Nhóm' : 'Bảng Vàng Cá Nhân',
         actions: [
-          IconButton(
-            icon: Icon(isInGroup ? Icons.group_rounded : Icons.group_add_rounded, color: Colors.white),
-            onPressed: () => showDialog(
+          LiquidGlassAppBarAction(
+            size: 38,
+            icon: Icon(
+              isInGroup ? Icons.group_rounded : Icons.group_add_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            tooltip: 'Quản lý nhóm',
+            onTap: () => showDialog(
               context: context,
               builder: (context) => const GroupDialog(),
             ),
-            tooltip: 'Quản lý nhóm',
           ),
-          const SizedBox(width: 8),
         ],
+        bottom: isInGroup
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(56),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                  child: LiquidGlassContainer(
+                    borderRadius: 16,
+                    padding: const EdgeInsets.all(4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _showGroupMode = false),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                gradient: !_showGroupMode ? LiquidGlassTheme.primaryButtonGradient : null,
+                                color: !_showGroupMode ? null : Colors.transparent,
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                'Cá Nhân',
+                                style: TextStyle(
+                                  color: !_showGroupMode ? Colors.white : Colors.white60,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _showGroupMode = true),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                gradient: _showGroupMode ? LiquidGlassTheme.primaryButtonGradient : null,
+                                color: _showGroupMode ? null : Colors.transparent,
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                'Nhóm',
+                                style: TextStyle(
+                                  color: _showGroupMode ? Colors.white : Colors.white60,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            : null,
       ),
-      child: Column(
-        children: [
-          if (isInGroup)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      child: rankings.isEmpty
+          ? Center(
               child: LiquidGlassContainer(
-                borderRadius: 16,
-                padding: const EdgeInsets.all(4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _showGroupMode = false),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            gradient: !_showGroupMode ? LiquidGlassTheme.primaryButtonGradient : null,
-                            color: !_showGroupMode ? null : Colors.transparent,
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            'Cá Nhân',
-                            style: TextStyle(
-                              color: !_showGroupMode ? Colors.white : Colors.white60,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _showGroupMode = true),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            gradient: _showGroupMode ? LiquidGlassTheme.primaryButtonGradient : null,
-                            color: _showGroupMode ? null : Colors.transparent,
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            'Nhóm',
-                            style: TextStyle(
-                              color: _showGroupMode ? Colors.white : Colors.white60,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                margin: const EdgeInsets.all(24),
+                child: Text(
+                  'Chưa có dữ liệu điểm nào để xếp hạng.',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
                 ),
               ),
-            ),
-          Expanded(
-            child: rankings.isEmpty
-                ? Center(
-                    child: LiquidGlassContainer(
-                      margin: const EdgeInsets.all(24),
-                      child: Text(
-                        'Chưa có dữ liệu điểm nào để xếp hạng.',
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
-                      ),
-                    ),
-                  )
-                : CommonScrollbarWithIosStatusBarTapDetectorV2(
-                    controller: _scrollController,
-                    child: ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
-                      itemCount: rankings.length,
+            )
+          : CommonScrollbarWithIosStatusBarTapDetectorV2(
+              controller: _scrollController,
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: EdgeInsets.fromLTRB(16, topPadding, 16, 120),
+                itemCount: rankings.length,
                       itemBuilder: (context, index) {
                         final userMap = rankings[index];
                         final UserModel user = userMap['user'];
@@ -350,9 +359,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       },
                     ),
                   ),
-          ),
-        ],
-      ),
     );
   }
 

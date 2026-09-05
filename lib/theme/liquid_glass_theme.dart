@@ -110,6 +110,19 @@ class LiquidGlassTheme {
           offset: const Offset(0, 4),
         ),
       ];
+
+  /// Calculates the top offset needed for screen content or scroll views
+  /// when the body extends behind the AppBar and status bar.
+  /// Matches UIKit's `appBarContentTop` (`paddingTop + kToolbarHeight`) plus comfortable spacing.
+  static double getAppBarContentTop(
+    BuildContext context, [
+    double extraSpacing = 12.0,
+    double? customAppBarHeight,
+  ]) {
+    final statusBar = MediaQuery.paddingOf(context).top;
+    final barHeight = customAppBarHeight ?? kToolbarHeight;
+    return statusBar + barHeight + extraSpacing;
+  }
 }
 
 /// A full-screen ambient canvas that injects soft, glowing colorful orbs
@@ -122,6 +135,7 @@ class LiquidGlassScaffoldWrapper extends StatelessWidget {
   final FloatingActionButtonLocation? floatingActionButtonLocation;
   final bool extendBody;
   final bool extendBodyBehindAppBar;
+  final bool autoApplyTopPadding;
 
   const LiquidGlassScaffoldWrapper({
     super.key,
@@ -132,6 +146,7 @@ class LiquidGlassScaffoldWrapper extends StatelessWidget {
     this.floatingActionButtonLocation,
     this.extendBody = true,
     this.extendBodyBehindAppBar = true,
+    this.autoApplyTopPadding = false,
   });
 
   @override
@@ -191,7 +206,18 @@ class LiquidGlassScaffoldWrapper extends StatelessWidget {
             ),
           ),
           // Screen child
-          child,
+          autoApplyTopPadding
+              ? Padding(
+                  padding: EdgeInsets.only(
+                    top: LiquidGlassTheme.getAppBarContentTop(
+                      context,
+                      0,
+                      appBar?.preferredSize.height,
+                    ),
+                  ),
+                  child: child,
+                )
+              : child,
         ],
       ),
     );

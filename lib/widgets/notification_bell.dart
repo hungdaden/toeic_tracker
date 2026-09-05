@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:may_uikit/may_uikit.dart';
 import '../screens/notification_history_screen.dart';
 
 class NotificationBell extends StatefulWidget {
@@ -65,53 +66,88 @@ class _NotificationBellState extends State<NotificationBell> with SingleTickerPr
           _shakeController.stop();
         }
 
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            AnimatedBuilder(
-              animation: _shakeController,
-              builder: (context, child) {
-                // Tạo hiệu ứng lắc góc nhẹ
-                final angle = sin(_shakeController.value * pi * 4) * 0.15;
-                return Transform.rotate(
-                  angle: unreadCount > 0 ? angle : 0,
-                  child: IconButton(
-                    icon: Icon(
-                      unreadCount > 0 ? Icons.notifications_active_rounded : Icons.notifications_rounded,
-                      color: unreadCount > 0 ? Colors.amber : Colors.white70,
+        return SizedBox(
+          width: 38,
+          height: 38,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              AnimatedBuilder(
+                animation: _shakeController,
+                builder: (context, child) {
+                  final angle = sin(_shakeController.value * pi * 4) * 0.15;
+                  return Transform.rotate(
+                    angle: unreadCount > 0 ? angle : 0,
+                    child: PressableCardContainerV2(
+                      borderRadius: AppRadiusV2.full,
+                      padding: EdgeInsets.zero,
+                      color: Colors.white.withValues(alpha: 0.08),
+                      borderColor: unreadCount > 0
+                          ? Colors.amber.withValues(alpha: 0.4)
+                          : Colors.white.withValues(alpha: 0.16),
+                      borderWidth: 0.8,
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const NotificationHistoryScreen(),
+                          ),
+                        );
+                        _loadLastRead();
+                      },
+                      child: SizedBox(
+                        width: 38,
+                        height: 38,
+                        child: Center(
+                          child: Icon(
+                            unreadCount > 0
+                                ? Icons.notifications_active_rounded
+                                : Icons.notifications_rounded,
+                            size: 19,
+                            color: unreadCount > 0 ? Colors.amber : Colors.white.withValues(alpha: 0.85),
+                          ),
+                        ),
+                      ),
                     ),
-                    onPressed: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const NotificationHistoryScreen()),
-                      );
-                      // Load lại timestamp sau khi người dùng quay về
-                      _loadLastRead();
-                    },
-                  ),
-                );
-              },
-            ),
-            if (unreadCount > 0)
-              Positioned(
-                right: 6,
-                top: 6,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF1E1E1E), width: 1),
-                  ),
-                  constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
-                  child: Text(
-                    unreadCount > 9 ? '9+' : '$unreadCount',
-                    style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
+                  );
+                },
+              ),
+              if (unreadCount > 0)
+                Positioned(
+                  right: -2,
+                  top: -2,
+                  child: IgnorePointer(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.black, width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.red.withValues(alpha: 0.5),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      child: Text(
+                        unreadCount > 9 ? '9+' : '$unreadCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         );
       },
     );

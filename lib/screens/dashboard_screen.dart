@@ -13,6 +13,7 @@ import '../models/toeic_score.dart';
 import '../widgets/dynamic_island_notification.dart';
 import 'exam_list_screen.dart';
 import '../widgets/notification_bell.dart';
+import '../widgets/liquid_glass_app_bar.dart';
 import '../theme/liquid_glass_theme.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -96,9 +97,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         final displayScore = _viewedScore ?? provider.latestScore;
 
+        final topPadding = LiquidGlassTheme.getAppBarContentTop(context, 4);
+
         return LiquidGlassScaffoldWrapper(
-          appBar: AppBar(
-            title: Row(
+          appBar: LiquidGlassAppBar(
+            titleWidget: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
@@ -124,13 +127,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(width: 10),
                 Text(
                   currentUser.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
                 ),
               ],
             ),
             actions: const [
               NotificationBell(),
-              SizedBox(width: 8),
             ],
           ),
           floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -158,11 +160,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (displayScore != null)
-                _buildLatestScoreHeroCard(context, displayScore, currentUser.isFourSkills),
+          child: Padding(
+            padding: EdgeInsets.only(top: topPadding),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (displayScore != null)
+                  _buildLatestScoreHeroCard(context, displayScore, currentUser.isFourSkills),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
                 child: Row(
@@ -352,10 +356,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
             ],
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildAvatarFallback(String name) {
     return Center(

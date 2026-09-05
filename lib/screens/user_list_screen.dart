@@ -12,6 +12,7 @@ import '../services/storage_service.dart';
 import '../widgets/skills_toggle.dart';
 import '../widgets/dynamic_island_notification.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/liquid_glass_app_bar.dart';
 import '../theme/liquid_glass_theme.dart';
 
 class UserListScreen extends StatefulWidget {
@@ -47,15 +48,15 @@ class _UserListScreenState extends State<UserListScreen> {
   @override
   Widget build(BuildContext context) {
     return LiquidGlassScaffoldWrapper(
-      appBar: AppBar(
-        title: const Text('Hồ Sơ Học Tập'),
+      appBar: LiquidGlassAppBar(
+        title: 'Hồ Sơ Học Tập',
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: Colors.white),
+          LiquidGlassAppBarAction(
+            size: 38,
+            icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 19),
             tooltip: 'Đăng xuất',
-            onPressed: _signOut,
+            onTap: _signOut,
           ),
-          const SizedBox(width: 8),
         ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -96,11 +97,13 @@ class _UserListScreenState extends State<UserListScreen> {
 
           final currentUserId = provider.currentUser?.id;
 
+          final topPadding = LiquidGlassTheme.getAppBarContentTop(context, 12);
+
           return CommonScrollbarWithIosStatusBarTapDetectorV2(
             controller: _scrollController,
             child: ListView.builder(
               controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 130),
+              padding: EdgeInsets.fromLTRB(16, topPadding, 16, 130),
               itemCount: provider.users.length,
               itemBuilder: (context, index) {
                 final user = provider.users[index];
