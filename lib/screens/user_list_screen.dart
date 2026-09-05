@@ -67,6 +67,10 @@ class _UserListScreenState extends State<UserListScreen> {
         child: GlassButtonV2(
           title: 'Thêm hồ sơ',
           icon: const Icon(Icons.person_add_rounded, size: 20, color: Colors.white),
+          color: const Color(0xFF4F46E5),
+          borderColor: const Color(0xFF818CF8).withValues(alpha: 0.4),
+          textColor: Colors.white,
+          shadowColor: const Color(0xFF4F46E5).withValues(alpha: 0.35),
           onTap: _openAddUserDialog,
         ),
       ),
@@ -116,12 +120,13 @@ class _UserListScreenState extends State<UserListScreen> {
                   borderRadius: 22,
                   padding: const EdgeInsets.all(16),
                   color: isCurrent
-                      ? LiquidGlassTheme.primaryAccent.withValues(alpha: 0.14)
-                      : Colors.white.withValues(alpha: 0.06),
+                      ? const Color(0xFF1B1E38)
+                      : const Color(0xFF111827),
                   borderColor: isCurrent
                       ? LiquidGlassTheme.primaryAccent.withValues(alpha: 0.5)
-                      : Colors.white.withValues(alpha: 0.12),
+                      : Colors.white.withValues(alpha: 0.08),
                   borderWidth: 1.0,
+                  shadowColor: Colors.black.withValues(alpha: 0.35),
                   onTap: () {
                     provider.setCurrentUser(user);
                     Navigator.pushAndRemoveUntil(

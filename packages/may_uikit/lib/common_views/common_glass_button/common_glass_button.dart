@@ -13,6 +13,11 @@ class GlassButtonV2 extends StatelessWidget {
     this.padding,
     this.borderRadius = DimensV2.d28,
     this.isCircle = false,
+    this.color,
+    this.gradient,
+    this.borderColor,
+    this.shadowColor,
+    this.textColor,
   });
 
   final Widget? child;
@@ -27,9 +32,23 @@ class GlassButtonV2 extends StatelessWidget {
   /// When true, renders as a circle.
   final bool isCircle;
 
+  /// Card surface color.
+  final Color? color;
+
+  /// Optional gradient.
+  final Gradient? gradient;
+
+  /// Border color.
+  final Color? borderColor;
+
+  /// Shadow color.
+  final Color? shadowColor;
+
+  /// Text color.
+  final Color? textColor;
+
   @override
   Widget build(BuildContext context) {
-    final colors = context.mayColors;
     final defaultPadding = padding ??
         (isCircle
             ? const EdgeInsets.all(DimensV2.d12)
@@ -37,6 +56,13 @@ class GlassButtonV2 extends StatelessWidget {
                 horizontal: DimensV2.d16,
                 vertical: DimensV2.d12,
               ));
+
+    final effectiveColor = (color == null && gradient == null)
+        ? const Color(0xFF1E293B)
+        : color;
+    final effectiveBorderColor = borderColor ?? Colors.white.withValues(alpha: 0.16);
+    final effectiveShadowColor = shadowColor ?? Colors.black.withValues(alpha: 0.35);
+    final effectiveTextColor = textColor ?? Colors.white;
 
     Widget buttonContent;
     if (child != null) {
@@ -49,7 +75,7 @@ class GlassButtonV2 extends StatelessWidget {
           Text(
             title!,
             style: AppTextStylesV2.text16Semibold.copyWith(
-              color: colors.txContentPrimaryDefault,
+              color: effectiveTextColor,
             ),
           ),
       ];
@@ -67,8 +93,13 @@ class GlassButtonV2 extends StatelessWidget {
       onTap: onTap,
       borderRadius: isCircle ? DimensV2.d100 : borderRadius,
       padding: defaultPadding,
+      color: effectiveColor,
+      gradient: gradient,
+      borderColor: effectiveBorderColor,
+      shadowColor: effectiveShadowColor,
       pressedOffset: DimensV2.d4,
       child: buttonContent,
     );
   }
 }
+

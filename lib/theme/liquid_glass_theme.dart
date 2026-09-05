@@ -38,8 +38,8 @@ class LiquidGlassTheme {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0x24FFFFFF),
-      Color(0x0AFFFFFF),
+      Color(0xEA111827),
+      Color(0xF50F172A),
     ],
     stops: [0.0, 1.0],
   );
@@ -48,8 +48,8 @@ class LiquidGlassTheme {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0x381E293B),
-      Color(0x1A0F172A),
+      Color(0xFF161F33),
+      Color(0xFF0F172A),
     ],
   );
 
@@ -321,8 +321,8 @@ class LiquidGlassContainer extends StatelessWidget {
             padding: padding,
             decoration: BoxDecoration(
               borderRadius: effectiveRadius,
-              color: surfaceColor ?? Colors.white.withValues(alpha: 0.08),
-              gradient: gradient ?? LiquidGlassTheme.glassSurfaceGradient,
+              color: gradient != null ? null : surfaceColor,
+              gradient: gradient ?? (surfaceColor == null ? LiquidGlassTheme.glassSurfaceGradient : null),
               border: Border.all(
                 color: borderColor ?? LiquidGlassTheme.glassBorder,
                 width: borderWidth,

@@ -175,11 +175,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                           margin: const EdgeInsets.symmetric(vertical: 6),
                           borderRadius: 20,
                           padding: const EdgeInsets.all(14),
-                          color: index < 3
-                              ? medalColor!.withValues(alpha: 0.08)
-                              : Colors.white.withValues(alpha: 0.06),
+                          color: index == 0
+                              ? const Color(0xFF1E1C14)
+                              : (index == 1
+                                  ? const Color(0xFF1A1C22)
+                                  : (index == 2
+                                      ? const Color(0xFF1E1714)
+                                      : const Color(0xFF111827))),
                           borderColor: borderColor,
                           borderWidth: 1.0,
+                          shadowColor: Colors.black.withValues(alpha: 0.35),
                           child: Row(
                             children: [
                               // Rank number or Medal

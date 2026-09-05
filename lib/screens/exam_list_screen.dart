@@ -63,6 +63,10 @@ class ExamListScreen extends StatelessWidget {
                 const SizedBox(width: 10),
                 GlassButtonV2(
                   title: 'Bắt đầu',
+                  color: const Color(0xFF4F46E5),
+                  borderColor: const Color(0xFF818CF8).withValues(alpha: 0.4),
+                  textColor: Colors.white,
+                  shadowColor: const Color(0xFF4F46E5).withValues(alpha: 0.35),
                   onTap: () {
                     Navigator.push(
                       context,

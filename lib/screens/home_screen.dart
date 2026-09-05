@@ -78,6 +78,10 @@ class HomeScreen extends StatelessWidget {
                     GlassButtonV2(
                       title: 'Đăng nhập ngay',
                       icon: const Icon(Icons.login_rounded, size: 20, color: Colors.white),
+                      color: const Color(0xFF4F46E5),
+                      borderColor: const Color(0xFF818CF8).withValues(alpha: 0.4),
+                      textColor: Colors.white,
+                      shadowColor: const Color(0xFF4F46E5).withValues(alpha: 0.35),
                       onTap: () {
                         Navigator.push(
                           context,
@@ -207,10 +211,10 @@ class _LiquidUserCardState extends State<_LiquidUserCard> {
       margin: const EdgeInsets.only(bottom: 16),
       borderRadius: 24,
       padding: const EdgeInsets.all(18),
-      color: Colors.white.withValues(alpha: 0.08),
-      borderColor: Colors.white.withValues(alpha: 0.15),
+      color: const Color(0xFF111827),
+      borderColor: Colors.white.withValues(alpha: 0.1),
       borderWidth: 1.0,
-      shadowColor: Colors.black.withValues(alpha: 0.3),
+      shadowColor: Colors.black.withValues(alpha: 0.35),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:may_uikit/may_uikit.dart';
 import 'liquid_glass_theme.dart';
 
 class AppTheme {
@@ -7,6 +8,20 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      extensions: [
+        MainThemeV2.darkColors.copyWith(
+          tokens: {
+            'bgAppSurface': LiquidGlassTheme.background,
+            'bgCard': const Color(0xFF111827),
+            'bgSurface': const Color(0xFF111827),
+            'sdDefault': Colors.black.withValues(alpha: 0.35),
+            'bdDefault': Colors.white.withValues(alpha: 0.12),
+            'txContentPrimaryDefault': Colors.white,
+            'txContentSecondaryDefault': Colors.white70,
+            'txContentTertiaryDefault': Colors.white60,
+          },
+        ),
+      ],
       colorScheme: ColorScheme.fromSeed(
         seedColor: LiquidGlassTheme.primaryAccent,
         brightness: Brightness.dark,
@@ -129,7 +144,7 @@ class AppTheme {
         textStyle: const TextStyle(color: Colors.white),
       ),
       cardTheme: CardThemeData(
-        color: LiquidGlassTheme.surfaceGlass,
+        color: const Color(0xFF111827),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         shape: RoundedRectangleBorder(

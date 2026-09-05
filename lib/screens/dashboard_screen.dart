@@ -149,6 +149,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: GlassButtonV2(
                   title: 'Nhập điểm',
                   icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                  color: const Color(0xFF4F46E5),
+                  borderColor: const Color(0xFF818CF8).withValues(alpha: 0.4),
+                  textColor: Colors.white,
+                  shadowColor: const Color(0xFF4F46E5).withValues(alpha: 0.35),
                   onTap: () async {
                     final result = await Navigator.push(
                       context,
@@ -277,12 +281,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             borderRadius: 18,
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                             color: isSelected
-                                ? LiquidGlassTheme.primaryAccent.withValues(alpha: 0.16)
-                                : Colors.white.withValues(alpha: 0.06),
+                                ? const Color(0xFF1E2640)
+                                : const Color(0xFF111827),
                             borderColor: isSelected
-                                ? LiquidGlassTheme.primaryAccent.withValues(alpha: 0.5)
-                                : Colors.white.withValues(alpha: 0.1),
+                                ? LiquidGlassTheme.primaryAccent.withValues(alpha: 0.6)
+                                : Colors.white.withValues(alpha: 0.08),
                             borderWidth: 1.0,
+                            shadowColor: Colors.black.withValues(alpha: 0.35),
                             onTap: () {
                               setState(() {
                                 _viewedScore = score;
@@ -389,11 +394,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Color(0x334F46E5),
-          Color(0x1A0F172A),
+          Color(0xFF1E1B4B),
+          Color(0xFF0F172A),
         ],
       ),
-      borderColor: Colors.white.withValues(alpha: 0.2),
+      borderColor: const Color(0xFF6366F1).withValues(alpha: 0.3),
       child: Stack(
         children: [
           Column(
@@ -475,7 +480,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: GlassButtonV2(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       title: 'Lộ trình',
-                      icon: const Icon(Icons.auto_awesome_rounded, size: 16, color: Colors.white),
+                      icon: const Icon(Icons.auto_awesome_rounded, size: 16, color: Color(0xFFA5B4FC)),
+                      color: const Color(0xFF23234D),
+                      borderColor: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                      textColor: Colors.white,
+                      shadowColor: Colors.black.withValues(alpha: 0.35),
                       onTap: () {
                         Navigator.push(
                           context,
@@ -491,7 +500,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: GlassButtonV2(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       title: 'Thi thử',
-                      icon: const Icon(Icons.assignment_turned_in_rounded, size: 16, color: Colors.white),
+                      icon: const Icon(Icons.assignment_turned_in_rounded, size: 16, color: Color(0xFF7DD3FC)),
+                      color: const Color(0xFF152A3D),
+                      borderColor: const Color(0xFF0284C7).withValues(alpha: 0.35),
+                      textColor: Colors.white,
+                      shadowColor: Colors.black.withValues(alpha: 0.35),
                       onTap: () {
                         Navigator.push(
                           context,
