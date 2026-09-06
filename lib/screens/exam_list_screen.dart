@@ -3,6 +3,7 @@ import 'package:may_uikit/may_uikit.dart';
 import '../models/exam_model.dart';
 import 'exam_session_screen.dart';
 import '../widgets/liquid_glass_app_bar.dart';
+import '../widgets/exam_mode_modal.dart';
 import '../theme/liquid_glass_theme.dart';
 
 class ExamListScreen extends StatelessWidget {
@@ -67,13 +68,16 @@ class ExamListScreen extends StatelessWidget {
                   borderColor: const Color(0xFF818CF8).withValues(alpha: 0.4),
                   textColor: Colors.white,
                   shadowColor: const Color(0xFF4F46E5).withValues(alpha: 0.35),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ExamSessionScreen(exam: exam),
-                      ),
-                    );
+                  onTap: () async {
+                    final isExamMode = await ExamModeModal.show(context, exam: exam);
+                    if (isExamMode != null && context.mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ExamSessionScreen(exam: exam, isExamMode: isExamMode),
+                        ),
+                      );
+                    }
                   },
                 ),
               ],

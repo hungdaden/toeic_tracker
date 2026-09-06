@@ -11,7 +11,8 @@ import '../models/toeic_score.dart';
 
 class ExamSessionScreen extends StatefulWidget {
   final ToeicExam exam;
-  const ExamSessionScreen({super.key, required this.exam});
+  final bool isExamMode;
+  const ExamSessionScreen({super.key, required this.exam, this.isExamMode = false});
 
   @override
   State<ExamSessionScreen> createState() => _ExamSessionScreenState();
@@ -56,8 +57,42 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
           _playerState = PlayerState.stopped;
           _audioPosition = Duration.zero;
         });
+
+        // Trong chế độ thi thử: tự động chuyển sang câu tiếp theo và phát audio
+        if (widget.isExamMode) {
+          final currentAudio = _currentlyPlayingUrl;
+          int nextIndex = _currentQuestionIndex + 1;
+
+          // Nếu các câu tiếp theo dùng chung đoạn audio này (ví dụ Part 3/4), bỏ qua các câu trong cùng đoạn đã nghe xong
+          while (nextIndex < widget.exam.questions.length &&
+              widget.exam.questions[nextIndex].audioUrl != null &&
+              widget.exam.questions[nextIndex].audioUrl == currentAudio) {
+            nextIndex++;
+          }
+
+          if (nextIndex < widget.exam.questions.length) {
+            _changeQuestionIndex(nextIndex);
+            final nextQuestion = widget.exam.questions[nextIndex];
+            if (nextQuestion.audioUrl != null) {
+              _toggleAudio(nextQuestion.audioUrl!);
+            }
+          }
+        }
       }
     });
+
+    // Chế độ thi thử: tự động phát audio câu 1 ngay khi vào làm bài
+    if (widget.isExamMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (widget.exam.questions.isNotEmpty) {
+          final firstQ = widget.exam.questions.first;
+          if (firstQ.audioUrl != null) {
+            _toggleAudio(firstQ.audioUrl!);
+          }
+        }
+      });
+    }
   }
 
   void _preGroupQuestions() {
@@ -82,7 +117,9 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
   }
 
   void _changeQuestionIndex(int newIndex) {
-    if (_playerState == PlayerState.playing) {
+    final targetQuestion = widget.exam.questions[newIndex];
+    // Chỉ dừng audio nếu chuyển sang câu có file audio khác hoặc không có audio
+    if (_currentlyPlayingUrl != null && _currentlyPlayingUrl != targetQuestion.audioUrl) {
       _audioPlayer.stop();
       _currentlyPlayingUrl = null;
     }
@@ -227,21 +264,96 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
-        title: const Text('Kết Quả Thi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: const Row(
+          children: [
+            Icon(Icons.military_tech_rounded, color: Color(0xFFF59E0B), size: 28),
+            SizedBox(width: 8),
+            Text('Kết Quả Bài Thi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Tổng điểm: ${result.totalScore}', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
-            const SizedBox(height: 12),
-            Text('Listening: ${result.listeningScore} (${result.correctListening}/100)', style: const TextStyle(color: Colors.white70, fontSize: 14)),
-            const SizedBox(height: 4),
-            Text('Reading: ${result.readingScore} (${result.correctReading}/100)', style: const TextStyle(color: Colors.white70, fontSize: 14)),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF10B981).withValues(alpha: 0.15),
+                    const Color(0xFF06B6D4).withValues(alpha: 0.15),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                children: [
+                  const Text('TỔNG ĐIỂM TOEIC', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white70, letterSpacing: 1.2)),
+                  const SizedBox(height: 6),
+                  Text('${result.totalScore}', style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  Column(
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.headphones_rounded, size: 14, color: Color(0xFF38BDF8)),
+                          SizedBox(width: 4),
+                          Text('Listening', style: TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.bold, fontSize: 13)),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text('${result.listeningScore} pts', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text('${result.correctListening}/100 câu', style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                    ],
+                  ),
+                  Container(width: 1, height: 40, color: Colors.white12),
+                  Column(
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.menu_book_rounded, size: 14, color: Color(0xFFA855F7)),
+                          SizedBox(width: 4),
+                          Text('Reading', style: TextStyle(color: Color(0xFFA855F7), fontWeight: FontWeight.bold, fontSize: 13)),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text('${result.readingScore} pts', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text('${result.correctReading}/100 câu', style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
         actions: [
           TextButton(
+            onPressed: () {
+              Navigator.of(dialogCtx).pop(); // Đóng dialog kết quả
+              if (mounted && Navigator.of(context).canPop()) {
+                Navigator.of(context).pop(); // Trở về Dashboard / màn hình trước an toàn
+              }
+            },
+            child: const Text('Thoát không lưu', style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton(
             onPressed: () {
               final userProvider = context.read<UserProvider>();
               userProvider.addScore(ToeicScore(
@@ -250,11 +362,17 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
                 listeningScore: result.listeningScore,
                 readingScore: result.readingScore,
               ));
-              Navigator.pop(context); 
-              Navigator.pop(context); 
-              Navigator.pop(context); 
+              Navigator.of(dialogCtx).pop(); // Đóng dialog kết quả
+              if (mounted && Navigator.of(context).canPop()) {
+                Navigator.of(context).pop(); // Trở về Dashboard / màn hình trước an toàn
+              }
             },
-            child: const Text('Lưu & Thoát', style: TextStyle(color: Color(0xFF818CF8), fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6366F1),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Lưu & Trở về', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -319,17 +437,49 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
                 leading: IconButton(
                   icon: const Icon(Icons.close, color: Colors.white70),
                   onPressed: () async {
-                    if (await _onWillPop()) Navigator.pop(context);
+                    final shouldPop = await _onWillPop();
+                    if (shouldPop && mounted) {
+                      Navigator.of(context).pop();
+                    }
                   },
                 ),
-                title: Text(
-                  _formatTime(_secondsRemaining),
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF818CF8),
-                    fontSize: 22,
-                  ),
+                title: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _formatTime(_secondsRemaining),
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF818CF8),
+                        fontSize: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: widget.isExamMode
+                            ? const Color(0xFF8B5CF6).withValues(alpha: 0.2)
+                            : const Color(0xFF06B6D4).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: widget.isExamMode
+                              ? const Color(0xFF8B5CF6).withValues(alpha: 0.5)
+                              : const Color(0xFF06B6D4).withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: Text(
+                        widget.isExamMode ? 'THI THỬ' : 'ÔN LUYỆN',
+                        style: TextStyle(
+                          color: widget.isExamMode ? const Color(0xFFA78BFA) : const Color(0xFF22D3EE),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 actions: [
                   TextButton.icon(
@@ -665,26 +815,60 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    trackHeight: 3,
-                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
-                    activeTrackColor: const Color(0xFF818CF8),
-                    inactiveTrackColor: Colors.white12,
-                    thumbColor: const Color(0xFFA5B4FC),
+                const SizedBox(height: 6),
+                if (widget.isExamMode)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            backgroundColor: Colors.white12,
+                            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF818CF8)),
+                            minHeight: 4,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.lock_rounded, size: 12, color: Color(0xFF818CF8)),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Không thể tua lại (Chế độ thi thử ETS)',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: Colors.white.withValues(alpha: 0.6),
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackHeight: 3,
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                      activeTrackColor: const Color(0xFF818CF8),
+                      inactiveTrackColor: Colors.white12,
+                      thumbColor: const Color(0xFFA5B4FC),
+                    ),
+                    child: Slider(
+                      value: progress,
+                      onChanged: (val) {
+                        if (isThisActive && dur.inMilliseconds > 0) {
+                          final newPos = Duration(milliseconds: (val * dur.inMilliseconds).toInt());
+                          _audioPlayer.seek(newPos);
+                        }
+                      },
+                    ),
                   ),
-                  child: Slider(
-                    value: progress,
-                    onChanged: (val) {
-                      if (isThisActive && dur.inMilliseconds > 0) {
-                        final newPos = Duration(milliseconds: (val * dur.inMilliseconds).toInt());
-                        _audioPlayer.seek(newPos);
-                      }
-                    },
-                  ),
-                ),
               ],
             ),
           ),

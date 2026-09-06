@@ -18,6 +18,7 @@ import 'exam_session_screen.dart';
 import '../services/exam_service.dart';
 import '../models/exam_model.dart';
 import '../widgets/mun_ai_roadmap_modal.dart';
+import '../widgets/exam_mode_modal.dart';
 import '../widgets/notification_bell.dart';
 import '../widgets/liquid_glass_app_bar.dart';
 import '../theme/liquid_glass_theme.dart';
@@ -294,148 +295,127 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             motion: const ScrollMotion(),
                             extentRatio: 0.75,
                             children: [
-                              CustomSlidableAction(
-                                onPressed: (actionCtx) {
-                                  MunAIRoadmapModal.show(context, score: score, user: currentUser);
-                                },
-                                backgroundColor: Colors.transparent,
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                                child: Builder(
-                                  builder: (actionCtx) => PressableCardContainerV2(
-                                    onTap: () {
-                                      Slidable.of(actionCtx)?.close();
-                                      MunAIRoadmapModal.show(context, score: score, user: currentUser);
-                                    },
-                                    gradient: const LinearGradient(
-                                      colors: [Color(0xFFA855F7), Color(0xFF7C3AED)],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: 16,
-                                    borderColor: const Color(0xFFC084FC).withValues(alpha: 0.5),
-                                    borderWidth: 1.0,
-                                    shadowColor: const Color(0xFF581C87).withValues(alpha: 0.5),
-                                    pressedOffset: 3.0,
-                                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                                    child: const Center(
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          FaIcon(FontAwesomeIcons.cat, color: Colors.white, size: 17),
-                                          SizedBox(height: 4),
-                                          Text(
-                                            'Lộ trình',
-                                            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                                          ),
-                                        ],
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                                  child: Builder(
+                                    builder: (actionCtx) => PressableCardContainerV2(
+                                      onTap: () {
+                                        Slidable.of(actionCtx)?.close();
+                                        MunAIRoadmapModal.show(context, score: score, user: currentUser);
+                                      },
+                                      gradient: const LinearGradient(
+                                        colors: [Color(0xFFA855F7), Color(0xFF7C3AED)],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
                                       ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              CustomSlidableAction(
-                                onPressed: (actionCtx) async {
-                                  final result = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => AddScoreScreen(existingScore: score),
-                                    ),
-                                  );
-                                  if (result == true && mounted) {
-                                    _showAimHitOverlay();
-                                  }
-                                },
-                                backgroundColor: Colors.transparent,
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                                child: Builder(
-                                  builder: (actionCtx) => PressableCardContainerV2(
-                                    onTap: () async {
-                                      Slidable.of(actionCtx)?.close();
-                                      final result = await Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => AddScoreScreen(existingScore: score),
+                                      borderRadius: 16,
+                                      borderColor: const Color(0xFFC084FC).withValues(alpha: 0.5),
+                                      borderWidth: 1.0,
+                                      shadowColor: const Color(0xFF581C87).withValues(alpha: 0.5),
+                                      pressedOffset: 3.0,
+                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                      child: const Center(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            FaIcon(FontAwesomeIcons.cat, color: Colors.white, size: 17),
+                                            SizedBox(height: 4),
+                                            Text(
+                                              'Lộ trình',
+                                              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                            ),
+                                          ],
                                         ),
-                                      );
-                                      if (result == true && mounted) {
-                                        _showAimHitOverlay();
-                                      }
-                                    },
-                                    gradient: const LinearGradient(
-                                      colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: 16,
-                                    borderColor: const Color(0xFF93C5FD).withValues(alpha: 0.5),
-                                    borderWidth: 1.0,
-                                    shadowColor: const Color(0xFF1E3A8A).withValues(alpha: 0.5),
-                                    pressedOffset: 3.0,
-                                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                                    child: const Center(
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(Icons.edit_rounded, color: Colors.white, size: 19),
-                                          SizedBox(height: 4),
-                                          Text(
-                                            'Sửa',
-                                            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                                          ),
-                                        ],
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
-                              CustomSlidableAction(
-                                onPressed: (actionCtx) {
-                                  provider.deleteScore(score.id);
-                                  DynamicIslandNotification.show(
-                                    context,
-                                    title: 'Đã xóa',
-                                    message:
-                                        'Đã xóa điểm thi ngày ${DateFormat('dd/MM/yyyy').format(score.date)}',
-                                    type: NotificationType.warning,
-                                  );
-                                },
-                                backgroundColor: Colors.transparent,
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                                child: Builder(
-                                  builder: (actionCtx) => PressableCardContainerV2(
-                                    onTap: () {
-                                      Slidable.of(actionCtx)?.close();
-                                      provider.deleteScore(score.id);
-                                      DynamicIslandNotification.show(
-                                        context,
-                                        title: 'Đã xóa',
-                                        message:
-                                            'Đã xóa điểm thi ngày ${DateFormat('dd/MM/yyyy').format(score.date)}',
-                                        type: NotificationType.warning,
-                                      );
-                                    },
-                                    gradient: const LinearGradient(
-                                      colors: [Color(0xFFEF4444), Color(0xFFB91C1C)],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: 16,
-                                    borderColor: const Color(0xFFFCA5A5).withValues(alpha: 0.5),
-                                    borderWidth: 1.0,
-                                    shadowColor: const Color(0xFF7F1D1D).withValues(alpha: 0.5),
-                                    pressedOffset: 3.0,
-                                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                                    child: const Center(
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(Icons.delete_outline_rounded, color: Colors.white, size: 19),
-                                          SizedBox(height: 4),
-                                          Text(
-                                            'Xóa',
-                                            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                                  child: Builder(
+                                    builder: (actionCtx) => PressableCardContainerV2(
+                                      onTap: () async {
+                                        Slidable.of(actionCtx)?.close();
+                                        final result = await Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => AddScoreScreen(existingScore: score),
                                           ),
-                                        ],
+                                        );
+                                        if (result == true && mounted) {
+                                          _showAimHitOverlay();
+                                        }
+                                      },
+                                      gradient: const LinearGradient(
+                                        colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      borderRadius: 16,
+                                      borderColor: const Color(0xFF93C5FD).withValues(alpha: 0.5),
+                                      borderWidth: 1.0,
+                                      shadowColor: const Color(0xFF1E3A8A).withValues(alpha: 0.5),
+                                      pressedOffset: 3.0,
+                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                      child: const Center(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.edit_rounded, color: Colors.white, size: 19),
+                                            SizedBox(height: 4),
+                                            Text(
+                                              'Sửa',
+                                              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                                  child: Builder(
+                                    builder: (actionCtx) => PressableCardContainerV2(
+                                      onTap: () {
+                                        Slidable.of(actionCtx)?.close();
+                                        provider.deleteScore(score.id);
+                                        DynamicIslandNotification.show(
+                                          context,
+                                          title: 'Đã xóa',
+                                          message:
+                                              'Đã xóa điểm thi ngày ${DateFormat('dd/MM/yyyy').format(score.date)}',
+                                          type: NotificationType.warning,
+                                        );
+                                      },
+                                      gradient: const LinearGradient(
+                                        colors: [Color(0xFFEF4444), Color(0xFFB91C1C)],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      borderRadius: 16,
+                                      borderColor: const Color(0xFFFCA5A5).withValues(alpha: 0.5),
+                                      borderWidth: 1.0,
+                                      shadowColor: const Color(0xFF7F1D1D).withValues(alpha: 0.5),
+                                      pressedOffset: 3.0,
+                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                      child: const Center(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.delete_outline_rounded, color: Colors.white, size: 19),
+                                            SizedBox(height: 4),
+                                            Text(
+                                              'Xóa',
+                                              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -773,9 +753,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 borderRadius: 14,
                 onTap: () async {
+                  final isExamMode = await ExamModeModal.show(context, exam: exam);
+                  if (isExamMode == null || !context.mounted) return;
+
                   DynamicIslandNotification.show(
                     context,
-                    title: 'Chuẩn bị đề thi',
+                    title: isExamMode ? 'Chế độ Thi Thử' : 'Chế độ Ôn Luyện',
                     message: 'Đang tải ${exam.title}...',
                     type: NotificationType.info,
                   );
@@ -784,7 +767,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => ExamSessionScreen(exam: loaded),
+                        builder: (_) => ExamSessionScreen(exam: loaded, isExamMode: isExamMode),
                       ),
                     );
                   }
