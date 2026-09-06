@@ -14,7 +14,8 @@ import '../widgets/liquid_glass_app_bar.dart';
 import '../theme/liquid_glass_theme.dart';
 
 class MunAIScreen extends StatefulWidget {
-  const MunAIScreen({super.key});
+  final String? initialPrompt;
+  const MunAIScreen({super.key, this.initialPrompt});
 
   @override
   State<MunAIScreen> createState() => _MunAIScreenState();
@@ -40,14 +41,30 @@ class _MunAIScreenState extends State<MunAIScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialPrompt != null && widget.initialPrompt!.isNotEmpty) {
+      _controller.text = widget.initialPrompt!;
+    }
+    _focusNode.addListener(_onFocusChange);
     // Khởi tạo model mặc định ngay lập tức để không bao giờ bị null gây treo loading
     _model = GenerativeModel(model: 'gemini-2.0-flash', apiKey: _apiKey);
     _initOrLoadLastSession();
     _loadAIConfig();
   }
 
+  void _onFocusChange() {
+    if (mounted) {
+      setState(() {});
+      if (_focusNode.hasFocus) {
+        Future.delayed(const Duration(milliseconds: 250), () {
+          if (mounted) _scrollToBottom();
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
+    _focusNode.removeListener(_onFocusChange);
     _controller.dispose();
     _focusNode.dispose();
     _scrollController.dispose();
@@ -250,6 +267,10 @@ class _MunAIScreenState extends State<MunAIScreen> {
     }
 
     final topPadding = LiquidGlassTheme.getAppBarContentTop(context, 12);
+    final double keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final bool isKeyboardOpen = keyboardInset > 0 || _focusNode.hasFocus;
+    // Khi mở bàn phím: đẩy lên vừa đủ sát mép trên bàn phím (8px). Khi đóng: cách đáy 110px tránh thanh bottom bar.
+    final double composerBottomPadding = isKeyboardOpen ? 8.0 : 110.0;
 
     return LiquidGlassScaffoldWrapper(
       appBar: LiquidGlassAppBar(
@@ -346,8 +367,10 @@ class _MunAIScreenState extends State<MunAIScreen> {
                 ),
 
               // Liquid Glass Chat Composer
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 6, 16, 110),
+              AnimatedPadding(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutCubic,
+                padding: EdgeInsets.fromLTRB(16, 6, 16, composerBottomPadding),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [

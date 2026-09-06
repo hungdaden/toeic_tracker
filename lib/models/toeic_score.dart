@@ -15,6 +15,11 @@ class ToeicScore {
     this.writingScore,
   });
 
+  int get listening => listeningScore;
+  int get reading => readingScore;
+  int get speaking => speakingScore ?? 0;
+  int get writing => writingScore ?? 0;
+
   int calculateTotal(bool isFourSkills) {
     if (isFourSkills) {
       return listeningScore + readingScore + (speakingScore ?? 0) + (writingScore ?? 0);

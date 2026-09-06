@@ -56,8 +56,8 @@ dependencies:
   may_uikit:
     path: ./packages/may_uikit
   font_awesome_flutter: ^11.0.0
+  audioplayers: ^6.1.0
 
-  
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -91,6 +91,11 @@ flutter:
     - assets/icon.png
     - assets/mock_users_data.json
     - assets/.env
+    - assets/exams/
+    - assets/exams/test_1/images/
+    - assets/exams/test_1/audio/
+    - assets/exams/test_2/images/
+    - assets/exams/test_2/audio/
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

@@ -313,4 +313,139 @@ void main() {
     final row1Center = (listeningRect4.left + readingRect4.right) / 2;
     expect((totalCenter - row1Center).abs(), lessThan(1.0));
   });
+
+  testWidgets('Dashboard score card displays 2 columns on 1 row in 2-skills mode, and 2 columns on 2 rows in 4-skills mode', (tester) async {
+    Widget buildDashboardSkillsBadges({required bool isFourSkills}) {
+      const listeningChip = LiquidGlassChip(
+        key: Key('dash_listening'),
+        icon: Icons.headphones_rounded,
+        label: 'Nghe',
+        value: '450',
+        accentColor: LiquidGlassTheme.scoreListening,
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      );
+
+      const readingChip = LiquidGlassChip(
+        key: Key('dash_reading'),
+        icon: Icons.menu_book_rounded,
+        label: 'Đọc',
+        value: '400',
+        accentColor: LiquidGlassTheme.scoreReading,
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      );
+
+      const speakingChip = LiquidGlassChip(
+        key: Key('dash_speaking'),
+        icon: Icons.mic_rounded,
+        label: 'Nói',
+        value: '130',
+        accentColor: LiquidGlassTheme.scoreSpeaking,
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      );
+
+      const writingChip = LiquidGlassChip(
+        key: Key('dash_writing'),
+        icon: Icons.edit_note_rounded,
+        label: 'Viết',
+        value: '120',
+        accentColor: LiquidGlassTheme.scoreWriting,
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      );
+
+      if (!isFourSkills) {
+        return Container(
+          width: 360,
+          padding: const EdgeInsets.all(16),
+          child: const Row(
+            children: [
+              Expanded(child: listeningChip),
+              SizedBox(width: 10),
+              Expanded(child: readingChip),
+            ],
+          ),
+        );
+      }
+
+      return Container(
+        width: 360,
+        padding: const EdgeInsets.all(16),
+        child: const Column(
+          children: [
+            Row(
+              children: [
+                Expanded(child: listeningChip),
+                SizedBox(width: 10),
+                Expanded(child: readingChip),
+              ],
+            ),
+            SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(child: speakingChip),
+                SizedBox(width: 10),
+                Expanded(child: writingChip),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 1. Test 2-skills mode: 2 columns on 1 row
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: buildDashboardSkillsBadges(isFourSkills: false),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final listeningRect2 = tester.getRect(find.byKey(const Key('dash_listening')));
+    final readingRect2 = tester.getRect(find.byKey(const Key('dash_reading')));
+
+    // 2 columns on 1 row: same top, same height, same width, listening < reading
+    expect(listeningRect2.top, equals(readingRect2.top));
+    expect(listeningRect2.height, equals(readingRect2.height));
+    expect(listeningRect2.width, equals(readingRect2.width));
+    expect(listeningRect2.right, lessThan(readingRect2.left));
+
+    // 2. Test 4-skills mode: 2 columns on 2 rows
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: buildDashboardSkillsBadges(isFourSkills: true),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final listeningRect4 = tester.getRect(find.byKey(const Key('dash_listening')));
+    final readingRect4 = tester.getRect(find.byKey(const Key('dash_reading')));
+    final speakingRect4 = tester.getRect(find.byKey(const Key('dash_speaking')));
+    final writingRect4 = tester.getRect(find.byKey(const Key('dash_writing')));
+
+    // Row 1: listening and reading
+    expect(listeningRect4.top, equals(readingRect4.top));
+    expect(listeningRect4.width, equals(readingRect4.width));
+    expect(listeningRect4.right, lessThan(readingRect4.left));
+
+    // Row 2: speaking and writing
+    expect(speakingRect4.top, equals(writingRect4.top));
+    expect(speakingRect4.width, equals(writingRect4.width));
+    expect(speakingRect4.right, lessThan(writingRect4.left));
+
+    // Vertical spacing: Row 1 above Row 2
+    expect(listeningRect4.bottom, lessThan(speakingRect4.top));
+
+    // Column alignment: Col 1 (listening, speaking) aligned, Col 2 (reading, writing) aligned
+    expect(listeningRect4.left, equals(speakingRect4.left));
+    expect(readingRect4.left, equals(writingRect4.left));
+    expect(listeningRect4.width, equals(speakingRect4.width));
+    expect(readingRect4.width, equals(writingRect4.width));
+  });
 }

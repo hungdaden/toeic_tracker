@@ -159,4 +159,59 @@ void main() {
     await tester.pump();
     expect(currentPage, equals(0));
   });
+
+  testWidgets('Mun AI chat composer pushes up snugly (8px) when keyboard is open and stays above bottom bar (110px) when closed',
+      (WidgetTester tester) async {
+    Widget buildTestComposer() {
+      return Builder(
+        builder: (context) {
+          final double keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+          final bool isKeyboardOpen = keyboardInset > 0;
+          final double composerBottomPadding = isKeyboardOpen ? 8.0 : 110.0;
+
+          return Scaffold(
+            body: Align(
+              alignment: Alignment.bottomCenter,
+              child: AnimatedPadding(
+                key: const Key('chat_composer_padding'),
+                duration: const Duration(milliseconds: 200),
+                padding: EdgeInsets.fromLTRB(16, 6, 16, composerBottomPadding),
+                child: Container(
+                  height: 48,
+                  color: Colors.blue,
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    // 1. Initial state: Keyboard closed (bottom inset 0)
+    tester.view.viewInsets = FakeViewPadding.zero;
+    await tester.pumpWidget(MaterialApp(home: buildTestComposer()));
+    await tester.pumpAndSettle();
+
+    AnimatedPadding paddingWidget =
+        tester.widget(find.byKey(const Key('chat_composer_padding')));
+    expect((paddingWidget.padding as EdgeInsets).bottom, equals(110.0));
+
+    // 2. Keyboard opens: iPhone keyboard height ~336
+    tester.view.viewInsets = const FakeViewPadding(bottom: 336 * 3);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    paddingWidget = tester.widget(find.byKey(const Key('chat_composer_padding')));
+    expect((paddingWidget.padding as EdgeInsets).bottom, equals(8.0),
+        reason: 'Chat composer should be snug to the keyboard with 8px margin');
+
+    // 3. Keyboard closes
+    tester.view.viewInsets = FakeViewPadding.zero;
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    paddingWidget = tester.widget(find.byKey(const Key('chat_composer_padding')));
+    expect((paddingWidget.padding as EdgeInsets).bottom, equals(110.0),
+        reason: 'Chat composer should restore 110px clearance above floating bottom bar');
+  });
 }

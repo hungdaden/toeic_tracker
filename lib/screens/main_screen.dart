@@ -131,9 +131,13 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final double keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final bool isKeyboardOpen = keyboardInset > 0;
+
     return Scaffold(
       backgroundColor: LiquidGlassTheme.background,
       extendBody: true,
+      resizeToAvoidBottomInset: false,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final screenWidth = constraints.maxWidth;
@@ -150,20 +154,22 @@ class _MainScreenState extends State<MainScreen> {
           );
         },
       ),
-      bottomNavigationBar: FloatingBottomBarV2(
-        currentIndex: _currentIndex,
-        onTap: _onTabSelected,
-        items: [
-          FloatingBottomBarItemV2(
-            title: 'Trang chủ',
-            activeIcon: const Icon(Icons.home_rounded, size: 22, color: Colors.white),
-            inactiveIcon: Icon(Icons.home_outlined, size: 22, color: Colors.white.withValues(alpha: 0.55)),
+      bottomNavigationBar: isKeyboardOpen
+          ? null
+          : FloatingBottomBarV2(
+              currentIndex: _currentIndex,
+              onTap: _onTabSelected,
+              items: [
+                FloatingBottomBarItemV2(
+                  title: 'Trang chủ',
+                  activeIcon: const Icon(Icons.home_rounded, size: 22, color: Colors.white),
+                  inactiveIcon: Icon(Icons.home_outlined, size: 22, color: Colors.white.withValues(alpha: 0.55)),
             activeBackgroundGradient: LiquidGlassTheme.primaryButtonGradient,
           ),
           FloatingBottomBarItemV2(
-            title: 'Thống kê',
-            activeIcon: const Icon(Icons.insert_chart_rounded, size: 22, color: Colors.white),
-            inactiveIcon: Icon(Icons.insert_chart_outlined_rounded, size: 22, color: Colors.white.withValues(alpha: 0.55)),
+            title: 'Bài thi',
+            activeIcon: const Icon(Icons.assignment_rounded, size: 22, color: Colors.white),
+            inactiveIcon: Icon(Icons.assignment_outlined, size: 22, color: Colors.white.withValues(alpha: 0.55)),
             activeBackgroundGradient: const LinearGradient(
               colors: [Color(0xFF06B6D4), Color(0xFF0284C7)],
             ),

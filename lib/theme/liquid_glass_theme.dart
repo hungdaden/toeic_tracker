@@ -179,6 +179,7 @@ class LiquidGlassScaffoldWrapper extends StatelessWidget {
   final bool extendBody;
   final bool extendBodyBehindAppBar;
   final bool autoApplyTopPadding;
+  final bool? resizeToAvoidBottomInset;
 
   const LiquidGlassScaffoldWrapper({
     super.key,
@@ -190,6 +191,7 @@ class LiquidGlassScaffoldWrapper extends StatelessWidget {
     this.extendBody = true,
     this.extendBodyBehindAppBar = true,
     this.autoApplyTopPadding = false,
+    this.resizeToAvoidBottomInset,
   });
 
   @override
@@ -198,6 +200,7 @@ class LiquidGlassScaffoldWrapper extends StatelessWidget {
       backgroundColor: LiquidGlassTheme.background,
       extendBody: extendBody,
       extendBodyBehindAppBar: extendBodyBehindAppBar,
+      resizeToAvoidBottomInset: resizeToAvoidBottomInset,
       appBar: appBar,
       floatingActionButton: floatingActionButton,
       floatingActionButtonLocation: floatingActionButtonLocation,

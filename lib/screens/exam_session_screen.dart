@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../models/exam_model.dart';
 import '../utils/toeic_score_converter.dart';
 import 'package:provider/provider.dart';
@@ -25,6 +27,12 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
   Widget? _cachedDrawerContent;
   bool _isSidebarOpen = false;
 
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  PlayerState _playerState = PlayerState.stopped;
+  Duration _audioDuration = Duration.zero;
+  Duration _audioPosition = Duration.zero;
+  String? _currentlyPlayingUrl;
+
   @override
   void initState() {
     super.initState();
@@ -32,11 +40,28 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
     _secondsRemaining = widget.exam.timeLimitMinutes * 60;
     _startTimer();
     _preGroupQuestions();
+
+    _audioPlayer.onPlayerStateChanged.listen((state) {
+      if (mounted) setState(() => _playerState = state);
+    });
+    _audioPlayer.onDurationChanged.listen((d) {
+      if (mounted) setState(() => _audioDuration = d);
+    });
+    _audioPlayer.onPositionChanged.listen((p) {
+      if (mounted) setState(() => _audioPosition = p);
+    });
+    _audioPlayer.onPlayerComplete.listen((_) {
+      if (mounted) {
+        setState(() {
+          _playerState = PlayerState.stopped;
+          _audioPosition = Duration.zero;
+        });
+      }
+    });
   }
 
   void _preGroupQuestions() {
     final groups = <QuestionPart, List<ToeicQuestion>>{};
-    // Khởi tạo đủ 7 part theo quy chuẩn TOEIC
     for (var part in QuestionPart.values) {
       groups[part] = [];
     }
@@ -56,8 +81,45 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
     });
   }
 
+  void _changeQuestionIndex(int newIndex) {
+    if (_playerState == PlayerState.playing) {
+      _audioPlayer.stop();
+      _currentlyPlayingUrl = null;
+    }
+    setState(() {
+      _currentQuestionIndex = newIndex;
+      _cachedDrawerContent = null;
+      _isSidebarOpen = false;
+    });
+  }
+
+  Future<void> _toggleAudio(String audioUrl) async {
+    if (_currentlyPlayingUrl == audioUrl && _playerState == PlayerState.playing) {
+      await _audioPlayer.pause();
+    } else if (_currentlyPlayingUrl == audioUrl && _playerState == PlayerState.paused) {
+      await _audioPlayer.resume();
+    } else {
+      await _audioPlayer.stop();
+      _currentlyPlayingUrl = audioUrl;
+      try {
+        if (audioUrl.startsWith('assets/')) {
+          final path = audioUrl.substring(7); // Remove 'assets/' prefix
+          await _audioPlayer.play(AssetSource(path));
+        } else if (audioUrl.startsWith('http://') || audioUrl.startsWith('https://')) {
+          await _audioPlayer.play(UrlSource(audioUrl));
+        } else {
+          await _audioPlayer.play(DeviceFileSource(audioUrl));
+        }
+      } catch (e) {
+        debugPrint('Audio play error: $e');
+      }
+    }
+  }
+
   @override
   void dispose() {
+    _audioPlayer.stop();
+    _audioPlayer.dispose();
     _timer?.cancel();
     super.dispose();
   }
@@ -341,14 +403,14 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
                         ),
                         const Spacer(),
                         TextButton(
-                          onPressed: _currentQuestionIndex > 0 ? () => setState(() => _currentQuestionIndex--) : null,
+                          onPressed: _currentQuestionIndex > 0 ? () => _changeQuestionIndex(_currentQuestionIndex - 1) : null,
                           style: TextButton.styleFrom(foregroundColor: Colors.white70),
                           child: const Text('QUAY LẠI', style: TextStyle(letterSpacing: 1.2)),
                         ),
                         const SizedBox(width: 20),
                         ElevatedButton(
                           onPressed: _currentQuestionIndex < widget.exam.questions.length - 1 
-                            ? () => setState(() => _currentQuestionIndex++) 
+                            ? () => _changeQuestionIndex(_currentQuestionIndex + 1) 
                             : _confirmSubmit,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF4F46E5),
@@ -412,6 +474,8 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
               ),
             ),
             const SizedBox(height: 24),
+            if (question.audioUrl != null)
+              _buildAudioPlayer(question.audioUrl!),
             if (question.passage != null) ...[
               Container(
                 padding: const EdgeInsets.all(20),
@@ -428,17 +492,7 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
               const SizedBox(height: 24),
             ],
             if (question.imageUrl != null) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  question.imageUrl!,
-                  fit: BoxFit.contain,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return const Center(child: CircularProgressIndicator());
-                  },
-                ),
-              ),
+              _buildQuestionImage(question.imageUrl!),
               const SizedBox(height: 24),
             ],
             if (question.questionText != null)
@@ -448,6 +502,193 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildQuestionImage(String url) {
+    Widget imgWidget;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      imgWidget = Image.network(
+        url,
+        fit: BoxFit.contain,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return const Center(child: CircularProgressIndicator());
+        },
+        errorBuilder: (_, __, ___) => _buildImagePlaceholder(url),
+      );
+    } else if (url.startsWith('assets/')) {
+      imgWidget = Image.asset(
+        url,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => _buildImagePlaceholder(url),
+      );
+    } else {
+      final file = File(url);
+      if (file.existsSync()) {
+        imgWidget = Image.file(
+          file,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => _buildImagePlaceholder(url),
+        );
+      } else {
+        imgWidget = _buildImagePlaceholder(url);
+      }
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black26,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: imgWidget,
+      ),
+    );
+  }
+
+  Widget _buildImagePlaceholder(String url) {
+    final fileName = url.split(Platform.pathSeparator).last.split('/').last;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.image_outlined, color: Color(0xFF818CF8), size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Hình ảnh minh họa: $fileName',
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAudioPlayer(String audioUrl) {
+    final fileName = audioUrl.split(Platform.pathSeparator).last.split('/').last;
+    final isThisPlaying = _currentlyPlayingUrl == audioUrl && _playerState == PlayerState.playing;
+    final isThisActive = _currentlyPlayingUrl == audioUrl;
+    final pos = isThisActive ? _audioPosition : Duration.zero;
+    final dur = (isThisActive && _audioDuration > Duration.zero) ? _audioDuration : const Duration(seconds: 30);
+    final progress = dur.inMilliseconds > 0 ? (pos.inMilliseconds / dur.inMilliseconds).clamp(0.0, 1.0) : 0.0;
+
+    String formatDuration(Duration d) {
+      final mins = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+      final secs = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+      return '$mins:$secs';
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF818CF8).withValues(alpha: 0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF4F46E5).withValues(alpha: 0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => _toggleAudio(audioUrl),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isThisPlaying
+                      ? [const Color(0xFFEC4899), const Color(0xFFBE185D)]
+                      : [const Color(0xFF6366F1), const Color(0xFF4F46E5)],
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: (isThisPlaying ? const Color(0xFFEC4899) : const Color(0xFF4F46E5)).withValues(alpha: 0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Icon(
+                isThisPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                color: Colors.white,
+                size: 26,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF38BDF8).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'AUDIO LC',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        fileName,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Text(
+                      '${formatDuration(pos)} / ${formatDuration(dur)}',
+                      style: const TextStyle(color: Colors.white60, fontSize: 11, fontFamily: 'monospace'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 3,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                    activeTrackColor: const Color(0xFF818CF8),
+                    inactiveTrackColor: Colors.white12,
+                    thumbColor: const Color(0xFFA5B4FC),
+                  ),
+                  child: Slider(
+                    value: progress,
+                    onChanged: (val) {
+                      if (isThisActive && dur.inMilliseconds > 0) {
+                        final newPos = Duration(milliseconds: (val * dur.inMilliseconds).toInt());
+                        _audioPlayer.seek(newPos);
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -565,13 +806,7 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
                       number: q.number,
                       isSelected: isSelected,
                       isAnswered: isAnswered,
-                      onTap: () {
-                        setState(() {
-                          _currentQuestionIndex = globalIndex;
-                          _cachedDrawerContent = null; 
-                          _isSidebarOpen = false;
-                        });
-                      },
+                      onTap: () => _changeQuestionIndex(globalIndex),
                     ),
                   );
                 }).toList(),

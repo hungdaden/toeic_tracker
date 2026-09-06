@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/rendering.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -6,12 +7,17 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:confetti/confetti.dart';
 import 'package:intl/intl.dart';
 import 'package:may_uikit/may_uikit.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../providers/user_provider.dart';
 import 'add_score_screen.dart';
 import 'learning_path_screen.dart';
 import '../models/toeic_score.dart';
 import '../widgets/dynamic_island_notification.dart';
 import 'exam_list_screen.dart';
+import 'exam_session_screen.dart';
+import '../services/exam_service.dart';
+import '../models/exam_model.dart';
+import '../widgets/mun_ai_roadmap_modal.dart';
 import '../widgets/notification_bell.dart';
 import '../widgets/liquid_glass_app_bar.dart';
 import '../theme/liquid_glass_theme.dart';
@@ -30,6 +36,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   late ScrollController _scrollController;
   bool _isFabVisible = true;
 
+  late ScrollController _examScrollController;
+  Timer? _examAutoScrollTimer;
+  Timer? _examResumeTimer;
+  bool _isUserInteractingWithExams = false;
+
   @override
   void initState() {
     super.initState();
@@ -44,10 +55,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
         if (!_isFabVisible) setState(() => _isFabVisible = true);
       }
     });
+
+    _examScrollController = ScrollController();
+    _startExamAutoScroll();
+  }
+
+  void _startExamAutoScroll() {
+    _examAutoScrollTimer?.cancel();
+    _examAutoScrollTimer = Timer.periodic(const Duration(milliseconds: 3500), (timer) {
+      if (!_examScrollController.hasClients || _isUserInteractingWithExams || !mounted) return;
+
+      final maxScroll = _examScrollController.position.maxScrollExtent;
+      final currentScroll = _examScrollController.offset;
+      const cardSpan = 287.0; // 275 card width + 12 right margin
+
+      double nextScroll = currentScroll + cardSpan;
+      if (currentScroll >= maxScroll - 5) {
+        // Đến cuối danh sách -> lướt mượt mà trở lại đầu
+        _examScrollController.animateTo(
+          0.0,
+          duration: const Duration(milliseconds: 1200),
+          curve: Curves.easeInOutCubic,
+        );
+      } else {
+        // Trượt sang đề tiếp theo
+        _examScrollController.animateTo(
+          nextScroll.clamp(0.0, maxScroll),
+          duration: const Duration(milliseconds: 750),
+          curve: Curves.easeInOutCubic,
+        );
+      }
+    });
+  }
+
+  void _onUserExamInteractionStart() {
+    _isUserInteractingWithExams = true;
+    _examAutoScrollTimer?.cancel();
+    _examResumeTimer?.cancel();
+  }
+
+  void _onUserExamInteractionEnd() {
+    _isUserInteractingWithExams = false;
+    _examResumeTimer?.cancel();
+    _examResumeTimer = Timer(const Duration(milliseconds: 3500), () {
+      if (!_isUserInteractingWithExams && mounted) {
+        _startExamAutoScroll();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _examAutoScrollTimer?.cancel();
+    _examResumeTimer?.cancel();
+    _examScrollController.dispose();
     _confettiController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -171,10 +232,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (displayScore != null)
-                  _buildLatestScoreHeroCard(context, displayScore, currentUser.isFourSkills),
+                _buildExamSelector(context),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -232,9 +292,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           key: Key(score.id),
                           endActionPane: ActionPane(
                             motion: const ScrollMotion(),
+                            extentRatio: 0.75,
                             children: [
-                              SlidableAction(
-                                onPressed: (_) async {
+                              CustomSlidableAction(
+                                onPressed: (actionCtx) {
+                                  MunAIRoadmapModal.show(context, score: score, user: currentUser);
+                                },
+                                backgroundColor: Colors.transparent,
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                                child: Builder(
+                                  builder: (actionCtx) => PressableCardContainerV2(
+                                    onTap: () {
+                                      Slidable.of(actionCtx)?.close();
+                                      MunAIRoadmapModal.show(context, score: score, user: currentUser);
+                                    },
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFFA855F7), Color(0xFF7C3AED)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: 16,
+                                    borderColor: const Color(0xFFC084FC).withValues(alpha: 0.5),
+                                    borderWidth: 1.0,
+                                    shadowColor: const Color(0xFF581C87).withValues(alpha: 0.5),
+                                    pressedOffset: 3.0,
+                                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                    child: const Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          FaIcon(FontAwesomeIcons.cat, color: Colors.white, size: 17),
+                                          SizedBox(height: 4),
+                                          Text(
+                                            'Lộ trình',
+                                            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              CustomSlidableAction(
+                                onPressed: (actionCtx) async {
                                   final result = await Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -245,17 +345,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     _showAimHitOverlay();
                                   }
                                 },
-                                backgroundColor: const Color(0xFF3B82F6),
-                                foregroundColor: Colors.white,
-                                icon: Icons.edit_rounded,
-                                label: 'Sửa',
-                                borderRadius: const BorderRadius.only(
-                                  topLeft: Radius.circular(16),
-                                  bottomLeft: Radius.circular(16),
+                                backgroundColor: Colors.transparent,
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                                child: Builder(
+                                  builder: (actionCtx) => PressableCardContainerV2(
+                                    onTap: () async {
+                                      Slidable.of(actionCtx)?.close();
+                                      final result = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => AddScoreScreen(existingScore: score),
+                                        ),
+                                      );
+                                      if (result == true && mounted) {
+                                        _showAimHitOverlay();
+                                      }
+                                    },
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: 16,
+                                    borderColor: const Color(0xFF93C5FD).withValues(alpha: 0.5),
+                                    borderWidth: 1.0,
+                                    shadowColor: const Color(0xFF1E3A8A).withValues(alpha: 0.5),
+                                    pressedOffset: 3.0,
+                                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                    child: const Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.edit_rounded, color: Colors.white, size: 19),
+                                          SizedBox(height: 4),
+                                          Text(
+                                            'Sửa',
+                                            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                              SlidableAction(
-                                onPressed: (_) {
+                              CustomSlidableAction(
+                                onPressed: (actionCtx) {
                                   provider.deleteScore(score.id);
                                   DynamicIslandNotification.show(
                                     context,
@@ -265,13 +399,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     type: NotificationType.warning,
                                   );
                                 },
-                                backgroundColor: const Color(0xFFEF4444),
-                                foregroundColor: Colors.white,
-                                icon: Icons.delete_outline_rounded,
-                                label: 'Xóa',
-                                borderRadius: const BorderRadius.only(
-                                  topRight: Radius.circular(16),
-                                  bottomRight: Radius.circular(16),
+                                backgroundColor: Colors.transparent,
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                                child: Builder(
+                                  builder: (actionCtx) => PressableCardContainerV2(
+                                    onTap: () {
+                                      Slidable.of(actionCtx)?.close();
+                                      provider.deleteScore(score.id);
+                                      DynamicIslandNotification.show(
+                                        context,
+                                        title: 'Đã xóa',
+                                        message:
+                                            'Đã xóa điểm thi ngày ${DateFormat('dd/MM/yyyy').format(score.date)}',
+                                        type: NotificationType.warning,
+                                      );
+                                    },
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFFEF4444), Color(0xFFB91C1C)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: 16,
+                                    borderColor: const Color(0xFFFCA5A5).withValues(alpha: 0.5),
+                                    borderWidth: 1.0,
+                                    shadowColor: const Color(0xFF7F1D1D).withValues(alpha: 0.5),
+                                    pressedOffset: 3.0,
+                                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                    child: const Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.delete_outline_rounded, color: Colors.white, size: 19),
+                                          SizedBox(height: 4),
+                                          Text(
+                                            'Xóa',
+                                            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
@@ -289,9 +456,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             borderWidth: 1.0,
                             shadowColor: Colors.black.withValues(alpha: 0.35),
                             onTap: () {
-                              setState(() {
-                                _viewedScore = score;
-                              });
+                              MunAIRoadmapModal.show(context, score: score, user: currentUser);
                             },
                             child: Row(
                               children: [
@@ -348,10 +513,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     ],
                                   ),
                                 ),
+                                InkWell(
+                                  onTap: () {
+                                    MunAIRoadmapModal.show(context, score: score, user: currentUser);
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFA855F7).withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: const Color(0xFFA855F7).withValues(alpha: 0.4),
+                                        width: 1.0,
+                                      ),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        FaIcon(FontAwesomeIcons.cat, size: 11, color: Color(0xFFC084FC)),
+                                        SizedBox(width: 5),
+                                        Text(
+                                          'Lộ trình AI',
+                                          style: TextStyle(
+                                            color: Color(0xFFC084FC),
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
                                 Icon(
                                   Icons.chevron_right_rounded,
-                                  size: 20,
-                                  color: Colors.white.withValues(alpha: 0.4),
+                                  size: 18,
+                                  color: Colors.white.withValues(alpha: 0.35),
                                 ),
                               ],
                             ),
@@ -367,7 +565,237 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     },
   );
-}
+  }
+
+  Widget _buildExamSelector(BuildContext context) {
+    final exams = ExamService().getAvailableExams();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 6, 20, 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF06B6D4).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.assignment_rounded, color: Color(0xFF06B6D4), size: 16),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'CHỌN BÀI THI TOEIC',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.1,
+                      color: Color(0xFF38BDF8),
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                ),
+                child: const Text(
+                  'ETS 2026 • 10 Đề',
+                  style: TextStyle(fontSize: 11, color: Colors.white70, fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 195,
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification is ScrollStartNotification) {
+                if (notification.dragDetails != null) {
+                  _onUserExamInteractionStart();
+                }
+              } else if (notification is ScrollEndNotification) {
+                _onUserExamInteractionEnd();
+              } else if (notification is UserScrollNotification) {
+                if (notification.direction != ScrollDirection.idle) {
+                  _onUserExamInteractionStart();
+                } else {
+                  _onUserExamInteractionEnd();
+                }
+              }
+              return false;
+            },
+            child: Listener(
+              onPointerDown: (_) => _onUserExamInteractionStart(),
+              onPointerUp: (_) => _onUserExamInteractionEnd(),
+              onPointerCancel: (_) => _onUserExamInteractionEnd(),
+              child: ListView.builder(
+                controller: _examScrollController,
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: exams.length,
+                itemBuilder: (context, index) {
+                  final exam = exams[index];
+                  return _buildExamCard(context, exam, index);
+                },
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExamCard(BuildContext context, ToeicExam exam, int index) {
+    return Container(
+      width: 275,
+      margin: const EdgeInsets.only(right: 12, bottom: 4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            index == 0 ? const Color(0xFF1E1B4B) : const Color(0xFF161F33),
+            const Color(0xFF0F172A),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: index == 0
+              ? const Color(0xFF818CF8).withValues(alpha: 0.45)
+              : Colors.white.withValues(alpha: 0.12),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: index == 0
+                ? const Color(0xFF4F46E5).withValues(alpha: 0.25)
+                : Colors.black.withValues(alpha: 0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'ETS 2026',
+                  style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.schedule_rounded, size: 12, color: Colors.white70),
+                    SizedBox(width: 4),
+                    Text(
+                      '200 câu • 120p',
+                      style: TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            exam.title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              letterSpacing: 0.2,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            exam.description ?? '',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11.5,
+              color: Colors.white.withValues(alpha: 0.65),
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.headphones_rounded, size: 14, color: Colors.white.withValues(alpha: 0.6)),
+                  const SizedBox(width: 4),
+                  Text('Audio', style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.6))),
+                  const SizedBox(width: 8),
+                  Icon(Icons.image_rounded, size: 14, color: Colors.white.withValues(alpha: 0.6)),
+                  const SizedBox(width: 4),
+                  Text('Ảnh', style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.6))),
+                ],
+              ),
+              const Spacer(),
+              GlassButtonV2(
+                title: 'Làm bài',
+                icon: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 16),
+                color: const Color(0xFF4F46E5),
+                borderColor: const Color(0xFF818CF8).withValues(alpha: 0.5),
+                textColor: Colors.white,
+                shadowColor: const Color(0xFF4F46E5).withValues(alpha: 0.35),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                borderRadius: 14,
+                onTap: () async {
+                  DynamicIslandNotification.show(
+                    context,
+                    title: 'Chuẩn bị đề thi',
+                    message: 'Đang tải ${exam.title}...',
+                    type: NotificationType.info,
+                  );
+                  final loaded = await ExamService().loadExam(exam.id);
+                  if (context.mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ExamSessionScreen(exam: loaded),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildAvatarFallback(String name) {
     return Center(
@@ -436,40 +864,83 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 14),
 
-              // Skill badges
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  LiquidGlassChip(
-                    icon: Icons.headphones_rounded,
-                    label: 'Nghe',
-                    value: '${displayedScore.listeningScore}',
-                    accentColor: LiquidGlassTheme.scoreListening,
-                  ),
-                  LiquidGlassChip(
-                    icon: Icons.menu_book_rounded,
-                    label: 'Đọc',
-                    value: '${displayedScore.readingScore}',
-                    accentColor: LiquidGlassTheme.scoreReading,
-                  ),
-                  if (isFourSkills) ...[
-                    LiquidGlassChip(
-                      icon: Icons.mic_rounded,
-                      label: 'Nói',
-                      value: '${displayedScore.speakingScore ?? 0}',
-                      accentColor: LiquidGlassTheme.scoreSpeaking,
+              // Skill badges: 2 skills chia làm 2 cột 1 dòng, 4 skills chia làm 2 cột 2 dòng
+              if (!isFourSkills)
+                Row(
+                  children: [
+                    Expanded(
+                      child: LiquidGlassChip(
+                        icon: Icons.headphones_rounded,
+                        label: 'Nghe',
+                        value: '${displayedScore.listeningScore}',
+                        accentColor: LiquidGlassTheme.scoreListening,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
                     ),
-                    LiquidGlassChip(
-                      icon: Icons.edit_note_rounded,
-                      label: 'Viết',
-                      value: '${displayedScore.writingScore ?? 0}',
-                      accentColor: LiquidGlassTheme.scoreWriting,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: LiquidGlassChip(
+                        icon: Icons.menu_book_rounded,
+                        label: 'Đọc',
+                        value: '${displayedScore.readingScore}',
+                        accentColor: LiquidGlassTheme.scoreReading,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
                     ),
                   ],
-                ],
-              ),
+                )
+              else
+                Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: LiquidGlassChip(
+                            icon: Icons.headphones_rounded,
+                            label: 'Nghe',
+                            value: '${displayedScore.listeningScore}',
+                            accentColor: LiquidGlassTheme.scoreListening,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: LiquidGlassChip(
+                            icon: Icons.menu_book_rounded,
+                            label: 'Đọc',
+                            value: '${displayedScore.readingScore}',
+                            accentColor: LiquidGlassTheme.scoreReading,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: LiquidGlassChip(
+                            icon: Icons.mic_rounded,
+                            label: 'Nói',
+                            value: '${displayedScore.speakingScore ?? 0}',
+                            accentColor: LiquidGlassTheme.scoreSpeaking,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: LiquidGlassChip(
+                            icon: Icons.edit_note_rounded,
+                            label: 'Viết',
+                            value: '${displayedScore.writingScore ?? 0}',
+                            accentColor: LiquidGlassTheme.scoreWriting,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
 
               const SizedBox(height: 16),
 
