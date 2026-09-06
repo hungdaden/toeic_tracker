@@ -64,29 +64,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _startExamAutoScroll() {
     _examAutoScrollTimer?.cancel();
     _examAutoScrollTimer = Timer.periodic(const Duration(milliseconds: 3500), (timer) {
-      if (!_examScrollController.hasClients || _isUserInteractingWithExams || !mounted) return;
-
-      final maxScroll = _examScrollController.position.maxScrollExtent;
-      final currentScroll = _examScrollController.offset;
-      const cardSpan = 287.0; // 275 card width + 12 right margin
-
-      double nextScroll = currentScroll + cardSpan;
-      if (currentScroll >= maxScroll - 5) {
-        // Đến cuối danh sách -> lướt mượt mà trở lại đầu
-        _examScrollController.animateTo(
-          0.0,
-          duration: const Duration(milliseconds: 1200),
-          curve: Curves.easeInOutCubic,
-        );
-      } else {
-        // Trượt sang đề tiếp theo
-        _examScrollController.animateTo(
-          nextScroll.clamp(0.0, maxScroll),
-          duration: const Duration(milliseconds: 750),
-          curve: Curves.easeInOutCubic,
-        );
-      }
+      _scrollToNextExam();
     });
+  }
+
+  void _scrollToNextExam() {
+    if (!_examScrollController.hasClients || _isUserInteractingWithExams || !mounted) return;
+
+    final maxScroll = _examScrollController.position.maxScrollExtent;
+    final currentScroll = _examScrollController.offset;
+    const cardSpan = 287.0; // 275 card width + 12 right margin
+
+    // Tính chỉ số card tiếp theo để luôn đặt đề tiếp theo vào điểm đầu một cách chuẩn xác
+    final int nextIndex = (currentScroll / cardSpan + 0.05).floor() + 1;
+    final double targetScroll = nextIndex * cardSpan;
+
+    if (currentScroll >= maxScroll - 5 || targetScroll > maxScroll + 10) {
+      // Đến cuối danh sách -> lướt mượt mà trở lại đầu
+      _examScrollController.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 1200),
+        curve: Curves.easeInOutCubic,
+      );
+    } else {
+      // Trượt sang đề tiếp theo và căn chuẩn vào điểm đầu
+      _examScrollController.animateTo(
+        targetScroll.clamp(0.0, maxScroll),
+        duration: const Duration(milliseconds: 750),
+        curve: Curves.easeInOutCubic,
+      );
+    }
   }
 
   void _onUserExamInteractionStart() {
@@ -100,6 +107,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _examResumeTimer?.cancel();
     _examResumeTimer = Timer(const Duration(milliseconds: 3500), () {
       if (!_isUserInteractingWithExams && mounted) {
+        // Căn chỉnh đề tiếp theo vào điểm đầu ngay khi tiếp tục auto-scroll
+        _scrollToNextExam();
         _startExamAutoScroll();
       }
     });

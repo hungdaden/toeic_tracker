@@ -72,27 +72,21 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
 
           if (nextIndex < widget.exam.questions.length) {
             _changeQuestionIndex(nextIndex);
-            final nextQuestion = widget.exam.questions[nextIndex];
-            if (nextQuestion.audioUrl != null) {
-              _toggleAudio(nextQuestion.audioUrl!);
-            }
           }
         }
       }
     });
 
-    // Chế độ thi thử: tự động phát audio câu 1 ngay khi vào làm bài
-    if (widget.isExamMode) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        if (widget.exam.questions.isNotEmpty) {
-          final firstQ = widget.exam.questions.first;
-          if (firstQ.audioUrl != null) {
-            _toggleAudio(firstQ.audioUrl!);
-          }
+    // Ở cả 2 chế độ: tự động phát audio câu 1 ngay khi vào làm bài
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (widget.exam.questions.isNotEmpty) {
+        final firstQ = widget.exam.questions.first;
+        if (firstQ.audioUrl != null) {
+          _playAudio(firstQ.audioUrl!);
         }
-      });
-    }
+      }
+    });
   }
 
   void _preGroupQuestions() {
@@ -117,17 +111,51 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
   }
 
   void _changeQuestionIndex(int newIndex) {
+    if (newIndex < 0 || newIndex >= widget.exam.questions.length) return;
+
     final targetQuestion = widget.exam.questions[newIndex];
+    final targetAudio = targetQuestion.audioUrl;
+    final isDifferentAudio = targetAudio != null && _currentlyPlayingUrl != targetAudio;
+
     // Chỉ dừng audio nếu chuyển sang câu có file audio khác hoặc không có audio
-    if (_currentlyPlayingUrl != null && _currentlyPlayingUrl != targetQuestion.audioUrl) {
+    if (_currentlyPlayingUrl != null && _currentlyPlayingUrl != targetAudio) {
       _audioPlayer.stop();
       _currentlyPlayingUrl = null;
     }
+
     setState(() {
       _currentQuestionIndex = newIndex;
       _cachedDrawerContent = null;
       _isSidebarOpen = false;
     });
+
+    // Ở cả 2 chế độ: tự động phát audio khi next câu hỏi
+    if (isDifferentAudio) {
+      _playAudio(targetAudio);
+    } else if (targetAudio != null && _playerState != PlayerState.playing) {
+      // Nếu cùng đoạn audio (ví dụ Part 3/4) nhưng đang dừng, tiếp tục phát
+      _playAudio(targetAudio);
+    }
+  }
+
+  Future<void> _playAudio(String audioUrl) async {
+    if (_currentlyPlayingUrl == audioUrl && _playerState == PlayerState.playing) {
+      return;
+    }
+    await _audioPlayer.stop();
+    _currentlyPlayingUrl = audioUrl;
+    try {
+      if (audioUrl.startsWith('assets/')) {
+        final path = audioUrl.substring(7); // Remove 'assets/' prefix
+        await _audioPlayer.play(AssetSource(path));
+      } else if (audioUrl.startsWith('http://') || audioUrl.startsWith('https://')) {
+        await _audioPlayer.play(UrlSource(audioUrl));
+      } else {
+        await _audioPlayer.play(DeviceFileSource(audioUrl));
+      }
+    } catch (e) {
+      debugPrint('Audio play error: $e');
+    }
   }
 
   Future<void> _toggleAudio(String audioUrl) async {
@@ -136,20 +164,7 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
     } else if (_currentlyPlayingUrl == audioUrl && _playerState == PlayerState.paused) {
       await _audioPlayer.resume();
     } else {
-      await _audioPlayer.stop();
-      _currentlyPlayingUrl = audioUrl;
-      try {
-        if (audioUrl.startsWith('assets/')) {
-          final path = audioUrl.substring(7); // Remove 'assets/' prefix
-          await _audioPlayer.play(AssetSource(path));
-        } else if (audioUrl.startsWith('http://') || audioUrl.startsWith('https://')) {
-          await _audioPlayer.play(UrlSource(audioUrl));
-        } else {
-          await _audioPlayer.play(DeviceFileSource(audioUrl));
-        }
-      } catch (e) {
-        debugPrint('Audio play error: $e');
-      }
+      await _playAudio(audioUrl);
     }
   }
 
@@ -390,10 +405,10 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
     if (key == LogicalKeyboardKey.digit4 || key == LogicalKeyboardKey.numpad4) _selectOption(3);
 
     if (key == LogicalKeyboardKey.arrowLeft) {
-      if (_currentQuestionIndex > 0) setState(() => _currentQuestionIndex--);
+      if (_currentQuestionIndex > 0) _changeQuestionIndex(_currentQuestionIndex - 1);
     }
     if (key == LogicalKeyboardKey.arrowRight) {
-      if (_currentQuestionIndex < widget.exam.questions.length - 1) setState(() => _currentQuestionIndex++);
+      if (_currentQuestionIndex < widget.exam.questions.length - 1) _changeQuestionIndex(_currentQuestionIndex + 1);
     }
   }
 
@@ -434,8 +449,10 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
               appBar: AppBar(
                 backgroundColor: const Color(0xFF1E1E1E),
                 elevation: 0,
+                centerTitle: false,
+                titleSpacing: 0,
                 leading: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white70),
+                  icon: const Icon(Icons.close_rounded, color: Colors.white70),
                   onPressed: () async {
                     final shouldPop = await _onWillPop();
                     if (shouldPop && mounted) {
@@ -443,75 +460,79 @@ class _ExamSessionScreenState extends State<ExamSessionScreen> {
                     }
                   },
                 ),
-                title: Row(
-                  mainAxisSize: MainAxisSize.min,
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      _formatTime(_secondsRemaining),
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF818CF8),
-                        fontSize: 20,
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _formatTime(_secondsRemaining),
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF818CF8),
+                            fontSize: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: widget.isExamMode
+                                ? const Color(0xFF8B5CF6).withValues(alpha: 0.2)
+                                : const Color(0xFF06B6D4).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: widget.isExamMode
+                                  ? const Color(0xFF8B5CF6).withValues(alpha: 0.5)
+                                  : const Color(0xFF06B6D4).withValues(alpha: 0.5),
+                            ),
+                          ),
+                          child: Text(
+                            widget.isExamMode ? 'THI THỬ' : 'ÔN LUYỆN',
+                            style: TextStyle(
+                              color: widget.isExamMode ? const Color(0xFFA78BFA) : const Color(0xFF22D3EE),
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: widget.isExamMode
-                            ? const Color(0xFF8B5CF6).withValues(alpha: 0.2)
-                            : const Color(0xFF06B6D4).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: widget.isExamMode
-                              ? const Color(0xFF8B5CF6).withValues(alpha: 0.5)
-                              : const Color(0xFF06B6D4).withValues(alpha: 0.5),
-                        ),
-                      ),
-                      child: Text(
-                        widget.isExamMode ? 'THI THỬ' : 'ÔN LUYỆN',
-                        style: TextStyle(
-                          color: widget.isExamMode ? const Color(0xFFA78BFA) : const Color(0xFF22D3EE),
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Câu ${currentQuestion.number}/${widget.exam.questions.length}',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.65),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
                 actions: [
-                  TextButton.icon(
-                    onPressed: _confirmSubmit,
-                    icon: const Icon(Icons.send_rounded, size: 18, color: Color(0xFF818CF8)),
-                    label: const Text(
-                      'NỘP BÀI',
-                      style: TextStyle(
-                        color: Color(0xFF818CF8),
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    style: TextButton.styleFrom(
-                      backgroundColor: const Color(0xFF818CF8).withOpacity(0.1),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
                   Padding(
-                    padding: const EdgeInsets.only(right: 16.0),
+                    padding: const EdgeInsets.only(right: 14.0),
                     child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF4F46E5).withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
+                      child: TextButton.icon(
+                        onPressed: _confirmSubmit,
+                        icon: const Icon(Icons.send_rounded, size: 15, color: Color(0xFF818CF8)),
+                        label: const Text(
+                          'NỘP BÀI',
+                          style: TextStyle(
+                            color: Color(0xFF818CF8),
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.8,
+                            fontSize: 12.5,
+                          ),
                         ),
-                        child: Text(
-                          'Câu ${currentQuestion.number}/${widget.exam.questions.length}',
-                          style: const TextStyle(color: Color(0xFF818CF8), fontWeight: FontWeight.bold),
+                        style: TextButton.styleFrom(
+                          backgroundColor: const Color(0xFF818CF8).withValues(alpha: 0.12),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                       ),
                     ),

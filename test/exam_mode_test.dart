@@ -100,7 +100,7 @@ void main() {
   });
 
   group('ExamSessionScreen Mode & Exit Tests', () {
-    testWidgets('Displays THI THỬ badge and locked rewind indicator in Exam Mode',
+    testWidgets('Displays THI THỬ badge and locked rewind indicator in Exam Mode without overlapping NỘP BÀI',
         (WidgetTester tester) async {
       final mockProvider = MockUserProvider();
 
@@ -120,9 +120,21 @@ void main() {
       expect(find.text('THI THỬ'), findsOneWidget);
       expect(find.text('Không thể tua lại (Chế độ thi thử ETS)'), findsOneWidget);
       expect(find.byType(Slider), findsNothing);
+
+      // Verify no overlap between THI THỬ badge and NỘP BÀI button
+      final badgeRect = tester.getRect(find.text('THI THỬ'));
+      final submitRect = tester.getRect(find.text('NỘP BÀI'));
+      expect(badgeRect.right < submitRect.left, isTrue,
+          reason: 'Badge THI THỬ must be on the left and never overlap NỘP BÀI');
+
+      // Test next question advancement
+      expect(find.text('Câu 1/2'), findsOneWidget);
+      await tester.tap(find.text('TIẾP THEO'));
+      await tester.pump();
+      expect(find.text('Câu 2/2'), findsOneWidget);
     });
 
-    testWidgets('Displays ÔN LUYỆN badge and interactive Slider in Practice Mode',
+    testWidgets('Displays ÔN LUYỆN badge and interactive Slider in Practice Mode without overlapping NỘP BÀI',
         (WidgetTester tester) async {
       final mockProvider = MockUserProvider();
 
@@ -142,6 +154,18 @@ void main() {
       expect(find.text('ÔN LUYỆN'), findsOneWidget);
       expect(find.text('Không thể tua lại (Chế độ thi thử ETS)'), findsNothing);
       expect(find.byType(Slider), findsOneWidget);
+
+      // Verify no overlap between ÔN LUYỆN badge and NỘP BÀI button
+      final badgeRect = tester.getRect(find.text('ÔN LUYỆN'));
+      final submitRect = tester.getRect(find.text('NỘP BÀI'));
+      expect(badgeRect.right < submitRect.left, isTrue,
+          reason: 'Badge ÔN LUYỆN must be on the left and never overlap NỘP BÀI');
+
+      // Test next question advancement in practice mode
+      expect(find.text('Câu 1/2'), findsOneWidget);
+      await tester.tap(find.text('TIẾP THEO'));
+      await tester.pump();
+      expect(find.text('Câu 2/2'), findsOneWidget);
     });
 
     testWidgets('Submit exam dialog shows scores and closes cleanly without black screen',
