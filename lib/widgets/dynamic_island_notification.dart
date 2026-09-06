@@ -216,16 +216,13 @@ class _NotificationWidgetState extends State<_NotificationWidget>
     final double collapsedWidth = 140.0;
     final double collapsedHeight = rawTopInset > 0 ? rawTopInset * 0.75 : 28.0;
 
-    // Kích thước mở rộng: Tăng thêm bề ngang (~320px)
+    // Kích thước mở rộng: Giữ nguyên bề ngang (~320px) đã được người dùng ưng ý
     final double expandedWidth = (screenWidth * 0.82).clamp(310.0, 335.0);
-    // Tối ưu kích thước theo đúng sơ đồ:
-    // Màu đen là tai thỏ (0 -> rawTopInset)
-    // Màu đỏ là Dynamic Island mở rộng xuống dưới
-    // Màu xanh là vùng nội dung xuất hiện (nằm hoàn toàn bên dưới tai thỏ, cách tai thỏ và đáy viên thuốc hợp lý)
-    final double expandedHeight = rawTopInset > 0 ? rawTopInset + 58.0 : 66.0;
+    // Thu gọn chiều cao: chỉ pop xuống vừa đủ chiều cao để hiện đủ nội dung (40px bên dưới notch)
+    final double expandedHeight = rawTopInset > 0 ? rawTopInset + 40.0 : 48.0;
 
-    // Khoảng đệm đỉnh: Đặt nội dung nằm hoàn toàn bên dưới tai thỏ vật lý theo đúng vùng màu xanh
-    final double contentTopPadding = rawTopInset > 0 ? rawTopInset + 8.0 : 10.0;
+    // Khoảng đệm đỉnh: Đặt nội dung nằm ngay sát dưới chân tai thỏ một cách tinh tế
+    final double contentTopPadding = rawTopInset > 0 ? rawTopInset + 2.5 : 5.0;
 
     // 2 góc sát cạnh trên màn hình phẳng tuyệt đối (Radius.zero), không bo cong.
     // 2 góc dưới bo cong tròn giọt nước Dynamic Island (26.0) hài hòa với chiều cao mới.
@@ -316,7 +313,7 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                       child: Padding(
                         padding: EdgeInsets.only(
                           top: contentTopPadding,
-                          bottom: 12.0,
+                          bottom: 6.5,
                           left: 14.0,
                           right: 14.0,
                         ),
