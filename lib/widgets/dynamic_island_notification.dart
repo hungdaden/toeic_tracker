@@ -218,14 +218,12 @@ class _NotificationWidgetState extends State<_NotificationWidget>
 
     // Kích thước mở rộng: Giữ nguyên bề ngang (~320px) đã được người dùng ưng ý
     final double expandedWidth = (screenWidth * 0.82).clamp(310.0, 335.0);
-    // Thu gọn chiều cao: chỉ pop xuống vừa đủ chiều cao để hiện đủ nội dung (40px bên dưới notch)
-    final double expandedHeight = rawTopInset > 0 ? rawTopInset + 40.0 : 48.0;
-
-    // Khoảng đệm đỉnh: Đặt nội dung nằm ngay sát dưới chân tai thỏ một cách tinh tế
-    final double contentTopPadding = rawTopInset > 0 ? rawTopInset + 2.5 : 5.0;
+    // Chiều cao Dynamic Island mở rộng bên dưới tai thỏ: 52px tạo tỷ lệ cân đối hoàn hảo với bán kính bo góc 26px
+    const double islandContentHeight = 52.0;
+    final double expandedHeight = rawTopInset > 0 ? rawTopInset + islandContentHeight : 56.0;
 
     // 2 góc sát cạnh trên màn hình phẳng tuyệt đối (Radius.zero), không bo cong.
-    // 2 góc dưới bo cong tròn giọt nước Dynamic Island (26.0) hài hòa với chiều cao mới.
+    // 2 góc dưới bo cong tròn giọt nước Dynamic Island (26.0) hài hòa chuẩn tỷ lệ với chiều cao 52px.
     const BorderRadius islandBorderRadius = BorderRadius.only(
       topLeft: Radius.zero,
       topRight: Radius.zero,
@@ -310,112 +308,118 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                           ),
                         ),
                       ),
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          top: contentTopPadding,
-                          bottom: 6.5,
-                          left: 14.0,
-                          right: 14.0,
-                        ),
-                        child: Center(
-                          child: Opacity(
-                            opacity: _contentOpacityAnimation.value,
-                            child: Transform.scale(
-                              scale: _contentScaleAnimation.value,
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  // Leading glass icon chip nhỏ gọn
-                                  Container(
-                                    width: 26.0,
-                                    height: 26.0,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: color.withValues(alpha: 0.18),
-                                      border: Border.all(
-                                        color: color.withValues(alpha: 0.45),
-                                        width: 1.0,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: color.withValues(alpha: 0.30),
-                                          blurRadius: 6,
-                                        ),
-                                      ],
-                                    ),
-                                    child: Center(
-                                      child: Icon(icon, color: color, size: 15),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  // Title & message nằm chính giữa Dynamic Island
-                                  Expanded(
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                      child: Column(
+                        children: [
+                          // Khoảng đệm che notch / status bar mượt mà theo animation
+                          SizedBox(
+                            height: (rawTopInset > 0 ? rawTopInset : 0.0) * clampedProgress,
+                          ),
+                          // Vùng nội dung Dynamic Island: Căn giữa tuyệt đối cả chiều ngang và chiều dọc
+                          Expanded(
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 14.0),
+                                child: Opacity(
+                                  opacity: _contentOpacityAnimation.value,
+                                  child: Transform.scale(
+                                    scale: _contentScaleAnimation.value,
+                                    child: Row(
                                       crossAxisAlignment: CrossAxisAlignment.center,
-                                      mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Text(
-                                          widget.title,
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 12.0,
-                                            letterSpacing: -0.2,
-                                            shadows: [
-                                              Shadow(
-                                                color: Colors.black45,
-                                                blurRadius: 4,
-                                                offset: Offset(0, 1),
+                                        // Leading glass icon chip nhỏ gọn
+                                        Container(
+                                          width: 26.0,
+                                          height: 26.0,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: color.withValues(alpha: 0.18),
+                                            border: Border.all(
+                                              color: color.withValues(alpha: 0.45),
+                                              width: 1.0,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: color.withValues(alpha: 0.30),
+                                                blurRadius: 6,
                                               ),
                                             ],
                                           ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 0.5),
-                                        Text(
-                                          widget.message,
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: Colors.white.withValues(alpha: 0.85),
-                                            fontSize: 10.5,
-                                            height: 1.15,
+                                          child: Center(
+                                            child: Icon(icon, color: color, size: 15),
                                           ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        // Title & message nằm chính giữa Dynamic Island
+                                        Expanded(
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                widget.title,
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 12.0,
+                                                  letterSpacing: -0.2,
+                                                  shadows: [
+                                                    Shadow(
+                                                      color: Colors.black45,
+                                                      blurRadius: 4,
+                                                      offset: Offset(0, 1),
+                                                    ),
+                                                  ],
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              const SizedBox(height: 1.0),
+                                              Text(
+                                                widget.message,
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  color: Colors.white.withValues(alpha: 0.85),
+                                                  fontSize: 10.5,
+                                                  height: 1.15,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        // Trailing balancing container chứa chấm trạng thái phát sáng cân xứng
+                                        SizedBox(
+                                          width: 26.0,
+                                          height: 26.0,
+                                          child: Center(
+                                            child: Container(
+                                              width: 6.5,
+                                              height: 6.5,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: color,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: color.withValues(alpha: 0.85),
+                                                    blurRadius: 5,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  // Trailing balancing container chứa chấm trạng thái phát sáng cân xứng
-                                  SizedBox(
-                                    width: 26.0,
-                                    height: 26.0,
-                                    child: Center(
-                                      child: Container(
-                                        width: 6.5,
-                                        height: 6.5,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: color,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: color.withValues(alpha: 0.85),
-                                              blurRadius: 5,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ),

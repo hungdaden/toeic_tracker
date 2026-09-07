@@ -93,6 +93,15 @@ void main() {
     expect(textPosition.dy, greaterThan(47.0),
         reason: 'Notification content must be placed safely below the physical notch');
 
+    // Verify vertical balance: content is centered and not crammed against the bottom border (clearance >= 10.0px)
+    final RenderBox messageRenderBox = tester.renderObject(find.text('Đã lưu điểm thi mới vào hệ thống'));
+    final Offset messagePosition = messageRenderBox.localToGlobal(Offset.zero);
+    final double contentBottomY = messagePosition.dy + messageRenderBox.size.height;
+    final double containerBottomY = containerBox.localToGlobal(Offset.zero).dy + containerBox.size.height;
+    final double bottomClearance = containerBottomY - contentBottomY;
+    expect(bottomClearance, greaterThanOrEqualTo(10.0),
+        reason: 'Content must have adequate breathing room from bottom border, not too close');
+
     // Tap to dismiss
     await tester.tap(find.text('Thành công'));
     await tester.pump();
