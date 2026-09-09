@@ -21,7 +21,10 @@ class MunAIScreen extends StatefulWidget {
   State<MunAIScreen> createState() => _MunAIScreenState();
 }
 
-class _MunAIScreenState extends State<MunAIScreen> {
+class _MunAIScreenState extends State<MunAIScreen> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   bool _isLoading = false;
@@ -56,7 +59,7 @@ class _MunAIScreenState extends State<MunAIScreen> {
       setState(() {});
       if (_focusNode.hasFocus) {
         Future.delayed(const Duration(milliseconds: 250), () {
-          if (mounted) _scrollToBottom();
+          if (mounted) _scrollToBottom(isAnimated: true);
         });
       }
     }
@@ -104,7 +107,7 @@ class _MunAIScreenState extends State<MunAIScreen> {
     final userProvider = context.read<UserProvider>();
     final currentUser = userProvider.currentUser;
     if (currentUser != null && currentUser.chatHistory.isNotEmpty) {
-      _loadSession(currentUser.chatHistory.first);
+      _loadSession(currentUser.chatHistory.first, isInitialLoad: true);
     } else {
       _createNewSession();
     }
@@ -124,20 +127,37 @@ class _MunAIScreenState extends State<MunAIScreen> {
     });
   }
 
-  void _loadSession(MunAIChatSession session) {
+  void _loadSession(MunAIChatSession session, {bool isInitialLoad = false}) {
     setState(() {
       _currentSession = session;
       _isSidebarOpen = false;
     });
-    _scrollToBottom();
+    _scrollToBottom(isAnimated: !isInitialLoad);
   }
 
-  void _scrollToBottom() {
+  void _scrollToBottom({bool isAnimated = true}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
+      if (!_scrollController.hasClients) return;
+      final position = _scrollController.position;
+      if (!position.hasContentDimensions) return;
+
+      final target = position.maxScrollExtent;
+      if (target <= 0) return;
+
+      if (!isAnimated) {
+        _scrollController.jumpTo(target);
+        // Bù đắp cho việc ListView.builder lazy layout mở rộng thêm sau lần layout đầu
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients &&
+              _scrollController.position.hasContentDimensions &&
+              _scrollController.position.maxScrollExtent > _scrollController.position.pixels) {
+            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+          }
+        });
+      } else {
         _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
+          target,
+          duration: const Duration(milliseconds: 250),
           curve: Curves.easeOutCubic,
         );
       }
@@ -158,7 +178,7 @@ class _MunAIScreenState extends State<MunAIScreen> {
       _isLoading = true;
     });
     _controller.clear();
-    _scrollToBottom();
+    _scrollToBottom(isAnimated: true);
 
     try {
       final userProvider = context.read<UserProvider>();
@@ -253,11 +273,12 @@ class _MunAIScreenState extends State<MunAIScreen> {
         });
       }
     }
-    _scrollToBottom();
+    _scrollToBottom(isAnimated: true);
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     if (_currentSession == null || _model == null) {
       return const LiquidGlassScaffoldWrapper(
         child: Center(
@@ -268,8 +289,9 @@ class _MunAIScreenState extends State<MunAIScreen> {
 
     final topPadding = LiquidGlassTheme.getAppBarContentTop(context, 12);
     final double keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-    final bool isKeyboardOpen = keyboardInset > 0 || _focusNode.hasFocus;
-    // Khi mở bàn phím: đẩy lên vừa đủ sát mép trên bàn phím (8px). Khi đóng: cách đáy 110px tránh thanh bottom bar.
+    final bool isKeyboardOpen = keyboardInset > 0;
+    // Khi mở bàn phím ảo (keyboardInset > 0): đẩy lên vừa đủ sát mép trên bàn phím (8px).
+    // Khi không có bàn phím ảo (hoặc dùng bàn phím cứng): duy trì cách đáy 110px tránh thanh bottom bar.
     final double composerBottomPadding = isKeyboardOpen ? 8.0 : 110.0;
 
     return LiquidGlassScaffoldWrapper(
@@ -492,17 +514,65 @@ class _MunAIScreenState extends State<MunAIScreen> {
               ),
               const SizedBox(height: 6),
             ],
-            Text(
+            _buildFormattedMessageText(
               msg.text,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 15,
-                height: 1.4,
-              ),
+              isUser: isUser,
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFormattedMessageText(String rawText, {required bool isUser}) {
+    // 1. Chuẩn hóa gạch đầu dòng Markdown dạng "* " hoặc "- " ở đầu dòng thành "• "
+    final formattedText = rawText.replaceAllMapped(
+      RegExp(r'(^|\n)[\*\-]\s+', multiLine: true),
+      (match) => '${match.group(1)}• ',
+    );
+
+    final baseStyle = TextStyle(
+      color: isUser ? Colors.white : Colors.white.withValues(alpha: 0.95),
+      fontSize: 15,
+      height: 1.45,
+      fontWeight: FontWeight.w400,
+    );
+
+    final boldStyle = baseStyle.copyWith(
+      fontWeight: FontWeight.bold,
+      color: isUser ? Colors.white : const Color(0xFFF3E8FF),
+    );
+
+    final spans = <InlineSpan>[];
+    final regex = RegExp(r'\*\*(.*?)\*\*', dotAll: true);
+    int lastIndex = 0;
+
+    for (final match in regex.allMatches(formattedText)) {
+      if (match.start > lastIndex) {
+        spans.add(TextSpan(
+          text: formattedText.substring(lastIndex, match.start),
+          style: baseStyle,
+        ));
+      }
+      final boldText = match.group(1);
+      if (boldText != null && boldText.isNotEmpty) {
+        spans.add(TextSpan(
+          text: boldText,
+          style: boldStyle,
+        ));
+      }
+      lastIndex = match.end;
+    }
+
+    if (lastIndex < formattedText.length) {
+      spans.add(TextSpan(
+        text: formattedText.substring(lastIndex),
+        style: baseStyle,
+      ));
+    }
+
+    return Text.rich(
+      TextSpan(children: spans),
     );
   }
 
@@ -595,7 +665,7 @@ class _MunAIScreenState extends State<MunAIScreen> {
                             color: Colors.white.withValues(alpha: 0.45),
                           ),
                         ),
-                        onTap: () => _loadSession(session),
+                        onTap: () => _loadSession(session, isInitialLoad: true),
                         trailing: IconButton(
                           icon: Icon(Icons.delete_outline_rounded,
                               size: 18, color: Colors.white.withValues(alpha: 0.5)),

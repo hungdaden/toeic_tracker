@@ -214,4 +214,114 @@ void main() {
     expect((paddingWidget.padding as EdgeInsets).bottom, equals(110.0),
         reason: 'Chat composer should restore 110px clearance above floating bottom bar');
   });
+
+  testWidgets('Mun AI chat scroll logic on entry immediately jumps to bottom without animated over-scrolling',
+      (WidgetTester tester) async {
+    final scrollController = ScrollController();
+
+    void scrollToBottom({bool isAnimated = true}) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!scrollController.hasClients) return;
+        final position = scrollController.position;
+        if (!position.hasContentDimensions) return;
+
+        final target = position.maxScrollExtent;
+        if (target <= 0) return;
+
+        if (!isAnimated) {
+          scrollController.jumpTo(target);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (scrollController.hasClients &&
+                scrollController.position.hasContentDimensions &&
+                scrollController.position.maxScrollExtent > scrollController.position.pixels) {
+              scrollController.jumpTo(scrollController.position.maxScrollExtent);
+            }
+          });
+        } else {
+          scrollController.animateTo(
+            target,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutCubic,
+          );
+        }
+      });
+    }
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ListView.builder(
+            controller: scrollController,
+            itemCount: 30,
+            itemBuilder: (context, index) => Container(
+              height: 60,
+              color: index.isEven ? Colors.red : Colors.green,
+              child: Text('Message $index'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Initial load: calls scrollToBottom(isAnimated: false)
+    scrollToBottom(isAnimated: false);
+    await tester.pump();
+    await tester.pump();
+
+    // Scroll position is immediately at maxScrollExtent without animating or lingering in the middle
+    expect(scrollController.position.pixels, equals(scrollController.position.maxScrollExtent));
+    expect(scrollController.position.isScrollingNotifier.value, isFalse,
+        reason: 'Initial load should not be in an active animation state');
+  });
+
+  testWidgets('Mun AI chat composer maintains 110px clearance when focused on simulator / hardware keyboard (viewInsets.bottom == 0)',
+      (WidgetTester tester) async {
+    final focusNode = FocusNode();
+
+    Widget buildTestComposer() {
+      return Builder(
+        builder: (context) {
+          final double keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+          final bool isKeyboardOpen = keyboardInset > 0;
+          final double composerBottomPadding = isKeyboardOpen ? 8.0 : 110.0;
+
+          return Scaffold(
+            body: Column(
+              children: [
+                Expanded(child: Container()),
+                AnimatedPadding(
+                  key: const Key('chat_composer_padding'),
+                  duration: const Duration(milliseconds: 200),
+                  padding: EdgeInsets.fromLTRB(16, 6, 16, composerBottomPadding),
+                  child: TextField(
+                    key: const Key('chat_field'),
+                    focusNode: focusNode,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    }
+
+    // Hardware keyboard / Simulator with no virtual keyboard (viewInsets.bottom == 0)
+    tester.view.viewInsets = FakeViewPadding.zero;
+    await tester.pumpWidget(MaterialApp(home: buildTestComposer()));
+    await tester.pumpAndSettle();
+
+    // Initial state: not focused, padding is 110
+    AnimatedPadding paddingWidget =
+        tester.widget(find.byKey(const Key('chat_composer_padding')));
+    expect((paddingWidget.padding as EdgeInsets).bottom, equals(110.0));
+
+    // Tap to focus input
+    await tester.tap(find.byKey(const Key('chat_field')));
+    await tester.pumpAndSettle();
+
+    expect(focusNode.hasFocus, isTrue);
+    paddingWidget = tester.widget(find.byKey(const Key('chat_composer_padding')));
+    expect((paddingWidget.padding as EdgeInsets).bottom, equals(110.0),
+        reason: 'Chat composer should NOT drop down to 8.0 when hardware keyboard or simulator is active without virtual keyboard');
+  });
 }

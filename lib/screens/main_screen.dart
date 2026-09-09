@@ -159,6 +159,11 @@ class _MainScreenState extends State<MainScreen> {
           : FloatingBottomBarV2(
               currentIndex: _currentIndex,
               onTap: _onTabSelected,
+              showBackgroundCurtain: false,
+              blurSigma: 18.0,
+              borderWidth: 1.2,
+              borderColor: LiquidGlassTheme.crystalGlassBorder,
+              backgroundGradient: LiquidGlassTheme.crystalGlassGradient,
               items: [
                 FloatingBottomBarItemV2(
                   title: 'Trang chủ',

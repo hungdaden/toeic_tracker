@@ -33,6 +33,7 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now().millisecondsSinceEpoch;
     await prefs.setInt('clear_notifications_timestamp', now);
+    await prefs.setInt('last_read_timestamp', now);
     setState(() {
       _clearUntilTimestamp = now;
     });
@@ -77,6 +78,7 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
         stream: FirebaseFirestore.instance
             .collection('notifications')
             .orderBy('sentAt', descending: true)
+            .limit(50)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -115,10 +117,24 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
               final body = data['body'] ?? '';
               final sentAt = (data['sentAt'] as Timestamp?)?.toDate() ?? DateTime.now();
 
-              return LiquidGlassContainer(
+              return Container(
                 margin: const EdgeInsets.only(bottom: 12),
-                borderRadius: 20,
                 padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E293B).withValues(alpha: 0.75),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    width: 1.0,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

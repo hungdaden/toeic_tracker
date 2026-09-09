@@ -54,7 +54,7 @@ class FloatingBottomBarV2 extends StatefulWidget {
     required this.onTap,
     this.isShrinked = false,
     this.shrinkTrigger = 0,
-    this.blurSigma = DimensV2.d24,
+    this.blurSigma = DimensV2.d20,
     this.backgroundColor,
     this.backgroundGradient,
     this.borderColor,
@@ -261,8 +261,8 @@ class _FloatingBottomBarV2State extends State<FloatingBottomBarV2> with TickerPr
                         colors: [
                           AppColorsV2.genericBlack.withValues(alpha: 0.0),
                           AppColorsV2.genericBlack.withValues(alpha: 0.0),
-                          AppColorsV2.genericBlack.withValues(alpha: 0.18),
-                          AppColorsV2.genericBlack.withValues(alpha: 0.58),
+                          AppColorsV2.genericBlack.withValues(alpha: 0.04),
+                          AppColorsV2.genericBlack.withValues(alpha: 0.14),
                         ],
                         stops: const [0.0, 0.42, 0.72, 1.0],
                       ),
@@ -296,17 +296,17 @@ class _FloatingBottomBarV2State extends State<FloatingBottomBarV2> with TickerPr
                     borderRadius: BorderRadius.circular(widget.borderRadius),
                     boxShadow: widget.shadows ?? [
                       BoxShadow(
-                        color: AppColorsV2.genericBlack.withValues(alpha: 0.38),
-                        blurRadius: DimensV2.d28,
-                        offset: const Offset(0, 10),
+                        color: AppColorsV2.genericBlack.withValues(alpha: 0.28),
+                        blurRadius: DimensV2.d24,
+                        offset: const Offset(0, 8),
                       ),
                       BoxShadow(
-                        color: AppColorsV2.genericBlack.withValues(alpha: 0.20),
-                        blurRadius: DimensV2.d14,
-                        offset: const Offset(0, 4),
+                        color: AppColorsV2.genericBlack.withValues(alpha: 0.12),
+                        blurRadius: DimensV2.d10,
+                        offset: const Offset(0, 2),
                       ),
                       BoxShadow(
-                        color: const Color(0xFF6366F1).withValues(alpha: 0.10),
+                        color: const Color(0xFF6366F1).withValues(alpha: 0.12),
                         blurRadius: DimensV2.d20,
                         offset: const Offset(0, 2),
                       ),
@@ -325,7 +325,7 @@ class _FloatingBottomBarV2State extends State<FloatingBottomBarV2> with TickerPr
                           color: widget.backgroundGradient != null
                               ? null
                               : (widget.backgroundColor ??
-                                  const Color(0xFF0D121F).withValues(alpha: 0.70)),
+                                  const Color(0xFF0F172A).withValues(alpha: 0.22)),
                           gradient: widget.backgroundGradient ??
                               (widget.backgroundColor != null
                                   ? null
@@ -333,24 +333,48 @@ class _FloatingBottomBarV2State extends State<FloatingBottomBarV2> with TickerPr
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                       colors: [
-                                        Color(0x8C1E2640),
-                                        Color(0x59111827),
-                                        Color(0x73090D16),
+                                        Color(0x33FFFFFF), // 20% specular sheen
+                                        Color(0x1438BDF8), // 8% ice-cyan clarity
+                                        Color(0x1A1E293B), // 10% translucent slate
+                                        Color(0x2E0F172A), // 18% obsidian anchor for contrast
                                       ],
-                                      stops: [0.0, 0.45, 1.0],
+                                      stops: [0.0, 0.30, 0.65, 1.0],
                                     )),
                           border: Border.all(
                             color: widget.borderColor ??
-                                AppColorsV2.genericWhite.withValues(alpha: 0.18),
+                                AppColorsV2.genericWhite.withValues(alpha: 0.28),
                             width: widget.borderWidth,
                           ),
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: DimensV2.d4,
-                            vertical: DimensV2.d4,
-                          ),
-                          child: LayoutBuilder(
+                        child: Stack(
+                          children: [
+                            Positioned(
+                              top: 0,
+                              left: widget.borderRadius * 0.35,
+                              right: widget.borderRadius * 0.35,
+                              height: 1.2,
+                              child: IgnorePointer(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(1),
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        AppColorsV2.genericWhite.withValues(alpha: 0.0),
+                                        AppColorsV2.genericWhite.withValues(alpha: 0.50),
+                                        AppColorsV2.genericWhite.withValues(alpha: 0.0),
+                                      ],
+                                      stops: const [0.0, 0.5, 1.0],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: DimensV2.d4,
+                                vertical: DimensV2.d4,
+                              ),
+                              child: LayoutBuilder(
                             builder: (context, constraints) {
                               final tabWidth = constraints.maxWidth / widget.items.length;
                               return Listener(
@@ -514,6 +538,8 @@ class _FloatingBottomBarV2State extends State<FloatingBottomBarV2> with TickerPr
                             },
                           ),
                         ),
+                      ],
+                    ),
                       ),
                     ),
                   ),

@@ -15,21 +15,25 @@ class NotificationBell extends StatefulWidget {
 class _NotificationBellState extends State<NotificationBell> with SingleTickerProviderStateMixin {
   late AnimationController _shakeController;
   int _lastReadTimestamp = 0;
+  int _clearUntilTimestamp = 0;
+  int _lastKnownUnreadCount = 0;
 
   @override
   void initState() {
     super.initState();
     _shakeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 600),
     );
-    _loadLastRead();
+    _loadTimestamps();
   }
 
-  Future<void> _loadLastRead() async {
+  Future<void> _loadTimestamps() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       _lastReadTimestamp = prefs.getInt('last_read_timestamp') ?? 0;
+      _clearUntilTimestamp = prefs.getInt('clear_notifications_timestamp') ?? 0;
     });
   }
 
@@ -44,26 +48,34 @@ class _NotificationBellState extends State<NotificationBell> with SingleTickerPr
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('notifications')
+          .orderBy('sentAt', descending: true)
+          .limit(20)
           .snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox();
+        if (!snapshot.hasData) return const SizedBox(width: 38, height: 38);
 
         final docs = snapshot.data!.docs;
         int unreadCount = 0;
+        final effectiveThreshold = max(_lastReadTimestamp, _clearUntilTimestamp);
 
         for (var doc in docs) {
           final data = doc.data() as Map<String, dynamic>;
           final sentAt = (data['sentAt'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
-          if (sentAt > _lastReadTimestamp) {
+          if (sentAt > effectiveThreshold) {
             unreadCount++;
           }
         }
 
-        // Kích hoạt hoặc dừng hiệu ứng rung
-        if (unreadCount > 0) {
-          _shakeController.repeat(reverse: true);
-        } else {
-          _shakeController.stop();
+        // Kích hoạt hiệu ứng rung 1 lần khi có thông báo mới (thay vì lặp vô tận gây lag)
+        if (unreadCount > 0 && unreadCount != _lastKnownUnreadCount) {
+          _lastKnownUnreadCount = unreadCount;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && !_shakeController.isAnimating) {
+              _shakeController.forward(from: 0.0);
+            }
+          });
+        } else if (unreadCount == 0) {
+          _lastKnownUnreadCount = 0;
         }
 
         return SizedBox(
@@ -76,42 +88,47 @@ class _NotificationBellState extends State<NotificationBell> with SingleTickerPr
               AnimatedBuilder(
                 animation: _shakeController,
                 builder: (context, child) {
-                  final angle = sin(_shakeController.value * pi * 4) * 0.15;
+                  final angle = _shakeController.isAnimating
+                      ? sin(_shakeController.value * pi * 4) * 0.15
+                      : 0.0;
                   return Transform.rotate(
-                    angle: unreadCount > 0 ? angle : 0,
-                    child: PressableCardContainerV2(
-                      borderRadius: AppRadiusV2.full,
-                      padding: EdgeInsets.zero,
-                      color: Colors.white.withValues(alpha: 0.08),
-                      borderColor: unreadCount > 0
-                          ? Colors.amber.withValues(alpha: 0.4)
-                          : Colors.white.withValues(alpha: 0.16),
-                      borderWidth: 0.8,
-                      onTap: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const NotificationHistoryScreen(),
-                          ),
-                        );
-                        _loadLastRead();
-                      },
-                      child: SizedBox(
-                        width: 38,
-                        height: 38,
-                        child: Center(
-                          child: Icon(
-                            unreadCount > 0
-                                ? Icons.notifications_active_rounded
-                                : Icons.notifications_rounded,
-                            size: 19,
-                            color: unreadCount > 0 ? Colors.amber : Colors.white.withValues(alpha: 0.85),
-                          ),
-                        ),
-                      ),
-                    ),
+                    angle: angle,
+                    child: child,
                   );
                 },
+                child: PressableCardContainerV2(
+                  borderRadius: AppRadiusV2.full,
+                  padding: EdgeInsets.zero,
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderColor: unreadCount > 0
+                      ? Colors.amber.withValues(alpha: 0.4)
+                      : Colors.white.withValues(alpha: 0.16),
+                  borderWidth: 0.8,
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationHistoryScreen(),
+                      ),
+                    );
+                    _loadTimestamps();
+                  },
+                  child: SizedBox(
+                    width: 38,
+                    height: 38,
+                    child: Center(
+                      child: Icon(
+                        unreadCount > 0
+                            ? Icons.notifications_active_rounded
+                            : Icons.notifications_rounded,
+                        size: 19,
+                        color: unreadCount > 0
+                            ? Colors.amber
+                            : Colors.white.withValues(alpha: 0.85),
+                      ),
+                    ),
+                  ),
+                ),
               ),
               if (unreadCount > 0)
                 Positioned(

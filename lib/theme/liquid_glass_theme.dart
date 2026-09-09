@@ -18,6 +18,7 @@ class LiquidGlassTheme {
   static const Color glassBorder = Color(0x26FFFFFF); // 15% white
   static const Color glassBorderLight = Color(0x40FFFFFF); // 25% white
   static const Color glassBorderSubtle = Color(0x14FFFFFF); // 8% white
+  static const Color crystalGlassBorder = Color(0x47FFFFFF); // 28% white specular edge
 
   // Accent Brand Colors
   static const Color primaryAccent = Color(0xFF6366F1); // Indigo
@@ -53,6 +54,21 @@ class LiquidGlassTheme {
       Color(0xFF161F33),
       Color(0xFF0F172A),
     ],
+  );
+
+  /// Crystal Liquid Glass gradient for floating interactive surfaces (e.g. FloatingBottomBar).
+  /// High transparency (~15-20%), luminous specular highlight at top-left,
+  /// ice-cyan crystal refraction, and dark obsidian anchor for icon contrast.
+  static const LinearGradient crystalGlassGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0x33FFFFFF), // 20% white specular highlight
+      Color(0x1438BDF8), // 8% ice-cyan shimmer for crystal liquid clarity
+      Color(0x1A1E293B), // 10% soft slate glass tone
+      Color(0x2E0F172A), // 18% obsidian anchor for icon contrast
+    ],
+    stops: [0.0, 0.30, 0.65, 1.0],
   );
 
   static const LinearGradient primaryButtonGradient = LinearGradient(
