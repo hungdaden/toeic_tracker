@@ -368,14 +368,17 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                           : (isNotch
                               ? Column(
                                   children: [
-                                    // Khoảng đệm che notch vật lý mượt mà theo animation
+                                    // Khoảng đệm che notch vật lý mượt mà theo animation (nâng nhẹ lên để nội dung có thêm khoảng trống dưới chân)
                                     SizedBox(
-                                      height: (rawTopInset > 0 ? rawTopInset : 0.0) * clampedProgress,
+                                      height: (rawTopInset > 0 ? (rawTopInset - 5.0) : 0.0) * clampedProgress,
                                     ),
-                                    // Vùng nội dung compact rút gọn dưới tai thỏ
+                                    // Vùng nội dung compact rút gọn dưới tai thỏ, nâng lên một chút tạo khoảng trống dưới chân nội dung
                                     Expanded(
-                                      child: Center(
-                                        child: _buildContentRow(color, icon),
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(bottom: 3.5),
+                                        child: Center(
+                                          child: _buildContentRow(color, icon),
+                                        ),
                                       ),
                                     ),
                                   ],

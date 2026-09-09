@@ -21,9 +21,9 @@ void main() async {
   } catch (e) {
     debugPrint('Warning: Không thể load assets/.env: $e');
   }
-  
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  
+
   // Kích hoạt bộ nhớ đệm Local (Cache) an toàn
   try {
     FirebaseFirestore.instance.settings = const Settings(
@@ -33,7 +33,7 @@ void main() async {
   } catch (e) {
     debugPrint('Firestore settings error: $e');
   }
-  
+
   runApp(
     MultiProvider(
       providers: [
@@ -72,31 +72,34 @@ class _ToeicTrackerAppState extends State<ToeicTrackerApp> {
         .collection('config')
         .doc('system')
         .snapshots()
-        .listen((snapshot) {
-      if (snapshot.exists) {
-        final data = snapshot.data() as Map<String, dynamic>;
-        final newStatus = data['maintenanceMode'] == true;
+        .listen(
+          (snapshot) {
+            if (snapshot.exists) {
+              final data = snapshot.data() as Map<String, dynamic>;
+              final newStatus = data['maintenanceMode'] == true;
 
-        // Nếu Admin vừa bật bảo trì (Status đổi từ false sang true)
-        if (newStatus && !_isMaintenance && !_isFirstLoad) {
-          _showMaintenanceNotification();
-        }
+              // Nếu Admin vừa bật bảo trì (Status đổi từ false sang true)
+              if (newStatus && !_isMaintenance && !_isFirstLoad) {
+                _showMaintenanceNotification();
+              }
 
-        if (mounted) {
-          setState(() {
-            _isMaintenance = newStatus;
-            _isFirstLoad = false;
-          });
-        }
-      }
-    }, onError: (error) {
-      debugPrint('Maintenance mode listener error: $error');
-      if (mounted && _isFirstLoad) {
-        setState(() {
-          _isFirstLoad = false;
-        });
-      }
-    });
+              if (mounted) {
+                setState(() {
+                  _isMaintenance = newStatus;
+                  _isFirstLoad = false;
+                });
+              }
+            }
+          },
+          onError: (error) {
+            debugPrint('Maintenance mode listener error: $error');
+            if (mounted && _isFirstLoad) {
+              setState(() {
+                _isFirstLoad = false;
+              });
+            }
+          },
+        );
   }
 
   void _showMaintenanceNotification() {

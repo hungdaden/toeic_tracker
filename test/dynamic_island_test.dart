@@ -90,20 +90,20 @@ void main() {
     final Text titleWidget = tester.widget(find.text('Thành công'));
     expect(titleWidget.textAlign, equals(TextAlign.center));
 
-    // Verify content text is positioned safely below the notch (Y > 47.0)
+    // Verify content text is positioned safely below the physical notch (~34.0px)
     final RenderBox textRenderBox = tester.renderObject(find.text('Thành công'));
     final Offset textPosition = textRenderBox.localToGlobal(Offset.zero);
-    expect(textPosition.dy, greaterThan(47.0),
+    expect(textPosition.dy, greaterThan(36.0),
         reason: 'Notification content must be placed safely below the physical notch');
 
-    // Verify vertical balance: content is centered and safely fits within compact height
+    // Verify vertical balance: content is elevated with breathing room from bottom border (clearance >= 3.0px)
     final RenderBox messageRenderBox = tester.renderObject(find.text('Đã lưu điểm thi mới vào hệ thống'));
     final Offset messagePosition = messageRenderBox.localToGlobal(Offset.zero);
     final double contentBottomY = messagePosition.dy + messageRenderBox.size.height;
     final double containerBottomY = containerBox.localToGlobal(Offset.zero).dy + containerBox.size.height;
     final double bottomClearance = containerBottomY - contentBottomY;
-    expect(bottomClearance, greaterThanOrEqualTo(0.5),
-        reason: 'Content must fit inside container without overflow');
+    expect(bottomClearance, greaterThanOrEqualTo(5.0),
+        reason: 'Content must have adequate breathing room from bottom border');
 
     // Tap to dismiss
     await tester.tap(find.text('Thành công'));
