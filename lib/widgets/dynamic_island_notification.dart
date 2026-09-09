@@ -212,24 +212,55 @@ class _NotificationWidgetState extends State<_NotificationWidget>
     final double rawTopInset = viewPaddingTop > 0 ? viewPaddingTop : paddingTop;
     final double screenWidth = MediaQuery.sizeOf(context).width;
 
-    // Phôi ban đầu: đúng khuôn notch vật lý của iPhone 12 (width: 140, height: ~34px)
-    final double collapsedWidth = 140.0;
-    final double collapsedHeight = rawTopInset > 0 ? rawTopInset * 0.75 : 28.0;
+    // Phân loại kiểu màn hình:
+    // - Dynamic Island (Viên thuốc - iPhone 14 Pro, 14 Pro Max, 15 series, 16 series): rawTopInset >= 54.0 (59.0 hoặc 62.0)
+    // - Tai thỏ (Notch - iPhone X, 11, 12, 13, 14 thường): 40.0 <= rawTopInset < 54.0 (44.0 - 50.0)
+    // - Màn hình phẳng (iPhone SE, iPad, Android flat): rawTopInset < 40.0
+    final bool isDynamicIsland = rawTopInset >= 54.0;
+    final bool isNotch = rawTopInset >= 40.0 && rawTopInset < 54.0;
 
-    // Kích thước mở rộng: Giữ nguyên bề ngang (~320px) đã được người dùng ưng ý
+    // Vị trí top:
+    // - Dynamic Island nổi độc lập tách biệt mép đỉnh: (rawTopInset - 37.0) / 2 (~11px)
+    // - Tai thỏ dính sát mép trên: 0.0 để liền mạch với notch vật lý
+    // - Màn hình phẳng: cách mép trên 10px hoặc rawTopInset + 6.0
+    final double targetTop = isDynamicIsland
+        ? ((rawTopInset - 37.0) / 2).clamp(8.0, 14.0)
+        : (isNotch ? 0.0 : (rawTopInset > 0 ? rawTopInset + 6.0 : 10.0));
+
+    // Kích thước phôi ban đầu (Collapsed):
+    // - Dynamic Island: Phôi viên thuốc vật lý chuẩn Apple (125.0 x 37.0)
+    // - Tai thỏ: Phôi notch vật lý (140.0 x ~34.0)
+    // - Màn hình phẳng: Phôi nhỏ (120.0 x 32.0)
+    final double collapsedWidth = isDynamicIsland
+        ? 125.0
+        : (isNotch ? 140.0 : 120.0);
+    final double collapsedHeight = isDynamicIsland
+        ? 37.0
+        : (isNotch ? (rawTopInset * 0.72).clamp(30.0, 36.0) : 32.0);
+
+    // Kích thước mở rộng (Expanded):
+    // - Bề ngang: ~320px chuẩn thanh lịch
     final double expandedWidth = (screenWidth * 0.82).clamp(310.0, 335.0);
-    // Chiều cao Dynamic Island mở rộng bên dưới tai thỏ: 52px tạo tỷ lệ cân đối hoàn hảo với bán kính bo góc 26px
-    const double islandContentHeight = 52.0;
-    final double expandedHeight = rawTopInset > 0 ? rawTopInset + islandContentHeight : 56.0;
+    // - Chiều cao:
+    //   + Dynamic Island (14 Pro trở lên): 72.0px (phần viên thuốc 37px ở trên + phần text 35px ở dưới,
+    //     đảm bảo text nằm HOÀN TOÀN BÊN DƯỚI viên thuốc vật lý, đủ breathing room không bị tràn pixel)
+    //   + Tai thỏ: rawTopInset + 26.0px (rút bớt đúng 50% chiều cao pop-down so với 52px trước đây)
+    //   + Màn hình phẳng: 44.0px
+    final double expandedHeight = isDynamicIsland
+        ? 72.0
+        : (isNotch ? rawTopInset + 26.0 : 44.0);
 
-    // 2 góc sát cạnh trên màn hình phẳng tuyệt đối (Radius.zero), không bo cong.
-    // 2 góc dưới bo cong tròn giọt nước Dynamic Island (26.0) hài hòa chuẩn tỷ lệ với chiều cao 52px.
-    const BorderRadius islandBorderRadius = BorderRadius.only(
-      topLeft: Radius.zero,
-      topRight: Radius.zero,
-      bottomLeft: Radius.circular(26.0),
-      bottomRight: Radius.circular(26.0),
-    );
+    // Bo góc (BorderRadius):
+    // - Dynamic Island / Màn hình phẳng: Bo tròn trọn vẹn 4 góc capsule viên thuốc (Radius.circular(24.0))
+    // - Tai thỏ: 2 góc trên phẳng tuyệt đối (Radius.zero), 2 góc dưới bo cong giọt nước (Radius.circular(16.0))
+    final BorderRadius islandBorderRadius = isDynamicIsland || !isNotch
+        ? BorderRadius.circular(24.0)
+        : const BorderRadius.only(
+            topLeft: Radius.zero,
+            topRight: Radius.zero,
+            bottomLeft: Radius.circular(16.0),
+            bottomRight: Radius.circular(16.0),
+          );
 
     return AnimatedBuilder(
       animation: _controller,
@@ -237,7 +268,7 @@ class _NotificationWidgetState extends State<_NotificationWidget>
         final progress = _bloomAnimation.value;
         final clampedProgress = progress.clamp(0.0, 1.0);
 
-        // Bung nở đàn hồi từ phôi tai thỏ
+        // Bung nở đàn hồi từ phôi
         final currentWidth = collapsedWidth + (expandedWidth - collapsedWidth) * progress;
         final currentHeight = collapsedHeight + (expandedHeight - collapsedHeight) * progress;
 
@@ -247,8 +278,32 @@ class _NotificationWidgetState extends State<_NotificationWidget>
           clampedProgress,
         )!;
 
+        // Viền:
+        // - Dynamic Island / Màn hình phẳng: Viền hairline 4 cạnh trọn vẹn
+        // - Tai thỏ: Bỏ viền trên, chỉ giữ viền 2 bên và viền dưới
+        final Border islandBorder = isDynamicIsland || !isNotch
+            ? Border.all(
+                color: borderColor.withValues(alpha: borderColor.a * clampedProgress),
+                width: 0.8,
+              )
+            : Border(
+                top: BorderSide.none,
+                left: BorderSide(
+                  color: borderColor.withValues(alpha: borderColor.a * clampedProgress),
+                  width: 0.8,
+                ),
+                right: BorderSide(
+                  color: borderColor.withValues(alpha: borderColor.a * clampedProgress),
+                  width: 0.8,
+                ),
+                bottom: BorderSide(
+                  color: borderColor.withValues(alpha: borderColor.a * clampedProgress),
+                  width: 0.8,
+                ),
+              );
+
         return Positioned(
-          top: 0.0,
+          top: targetTop,
           left: (screenWidth - currentWidth) / 2,
           child: Material(
             color: Colors.transparent,
@@ -266,7 +321,7 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                 decoration: BoxDecoration(
                   borderRadius: islandBorderRadius,
                   boxShadow: [
-                    // Deep ambient occlusion shadow tỏa êm xuống dưới, không tỏa ngược lên bezel
+                    // Deep ambient occlusion shadow tỏa êm xuống dưới
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.58 * clampedProgress),
                       blurRadius: 24,
@@ -288,139 +343,46 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                     filter: ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        // Nền màu ĐEN TUYỀN (pure OLED black) 100% để hòa lẫn hoàn toàn tai thỏ vật lý
+                        // Nền màu ĐEN TUYỀN (pure OLED black) 100% để hòa lẫn hoàn toàn tai thỏ / viên thuốc vật lý
                         color: Colors.black,
                         borderRadius: islandBorderRadius,
-                        // BỎ VIỀN TRÊN CÙNG (top: BorderSide.none), chỉ giữ viền cạnh trái/phải và viền dưới
-                        border: Border(
-                          top: BorderSide.none,
-                          left: BorderSide(
-                            color: borderColor.withValues(alpha: borderColor.a * clampedProgress),
-                            width: 0.8,
-                          ),
-                          right: BorderSide(
-                            color: borderColor.withValues(alpha: borderColor.a * clampedProgress),
-                            width: 0.8,
-                          ),
-                          bottom: BorderSide(
-                            color: borderColor.withValues(alpha: borderColor.a * clampedProgress),
-                            width: 0.8,
-                          ),
-                        ),
+                        border: islandBorder,
                       ),
-                      child: Column(
-                        children: [
-                          // Khoảng đệm che notch / status bar mượt mà theo animation
-                          SizedBox(
-                            height: (rawTopInset > 0 ? rawTopInset : 0.0) * clampedProgress,
-                          ),
-                          // Vùng nội dung Dynamic Island: Căn giữa tuyệt đối cả chiều ngang và chiều dọc
-                          Expanded(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 14.0),
-                                child: Opacity(
-                                  opacity: _contentOpacityAnimation.value,
-                                  child: Transform.scale(
-                                    scale: _contentScaleAnimation.value,
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.center,
-                                      children: [
-                                        // Leading glass icon chip nhỏ gọn
-                                        Container(
-                                          width: 26.0,
-                                          height: 26.0,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: color.withValues(alpha: 0.18),
-                                            border: Border.all(
-                                              color: color.withValues(alpha: 0.45),
-                                              width: 1.0,
-                                            ),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: color.withValues(alpha: 0.30),
-                                                blurRadius: 6,
-                                              ),
-                                            ],
-                                          ),
-                                          child: Center(
-                                            child: Icon(icon, color: color, size: 15),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        // Title & message nằm chính giữa Dynamic Island
-                                        Expanded(
-                                          child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                widget.title,
-                                                textAlign: TextAlign.center,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.w700,
-                                                  fontSize: 12.0,
-                                                  letterSpacing: -0.2,
-                                                  shadows: [
-                                                    Shadow(
-                                                      color: Colors.black45,
-                                                      blurRadius: 4,
-                                                      offset: Offset(0, 1),
-                                                    ),
-                                                  ],
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              const SizedBox(height: 1.0),
-                                              Text(
-                                                widget.message,
-                                                textAlign: TextAlign.center,
-                                                style: TextStyle(
-                                                  color: Colors.white.withValues(alpha: 0.85),
-                                                  fontSize: 10.5,
-                                                  height: 1.15,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        // Trailing balancing container chứa chấm trạng thái phát sáng cân xứng
-                                        SizedBox(
-                                          width: 26.0,
-                                          height: 26.0,
-                                          child: Center(
-                                            child: Container(
-                                              width: 6.5,
-                                              height: 6.5,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: color,
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: color.withValues(alpha: 0.85),
-                                                    blurRadius: 5,
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                      child: isDynamicIsland
+                          ? Column(
+                              children: [
+                                // Khoảng đệm che viên thuốc vật lý mượt mà theo animation
+                                SizedBox(
+                                  height: 37.0 * clampedProgress,
+                                ),
+                                // Vùng nội dung: Icon, Text và Chấm màu nằm cùng một dòng căn thẳng hàng
+                                Expanded(
+                                  child: ClipRect(
+                                    child: Center(
+                                      child: _buildContentRow(color, icon),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                              ],
+                            )
+                          : (isNotch
+                              ? Column(
+                                  children: [
+                                    // Khoảng đệm che notch vật lý mượt mà theo animation
+                                    SizedBox(
+                                      height: (rawTopInset > 0 ? rawTopInset : 0.0) * clampedProgress,
+                                    ),
+                                    // Vùng nội dung compact rút gọn dưới tai thỏ
+                                    Expanded(
+                                      child: Center(
+                                        child: _buildContentRow(color, icon),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Center(
+                                  child: _buildContentRow(color, icon),
+                                )),
                     ),
                   ),
                 ),
@@ -429,6 +391,114 @@ class _NotificationWidgetState extends State<_NotificationWidget>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildContentRow(Color color, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+      child: Opacity(
+        opacity: _contentOpacityAnimation.value,
+        child: Transform.scale(
+          scale: _contentScaleAnimation.value,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Leading glass icon chip nhỏ gọn
+              Container(
+                width: 22.0,
+                height: 22.0,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: color.withValues(alpha: 0.18),
+                  border: Border.all(
+                    color: color.withValues(alpha: 0.45),
+                    width: 1.0,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.30),
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Icon(icon, color: color, size: 13),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Title & message nằm chính giữa
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.title,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11.5,
+                          letterSpacing: -0.2,
+                          height: 1.1,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black45,
+                              blurRadius: 4,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 0.5),
+                      Text(
+                        widget.message,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.85),
+                          fontSize: 9.5,
+                          height: 1.1,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Trailing balancing container chứa chấm trạng thái phát sáng cân xứng
+              SizedBox(
+                width: 20.0,
+                height: 20.0,
+                child: Center(
+                  child: Container(
+                    width: 5.5,
+                    height: 5.5,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: color,
+                      boxShadow: [
+                        BoxShadow(
+                          color: color.withValues(alpha: 0.85),
+                          blurRadius: 5,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
