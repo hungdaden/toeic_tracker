@@ -23,21 +23,27 @@ jobs:
           flutter-version: '3.38.7'
           cache: true
 
-      - name: Disable Swift Package Manager
-        run: flutter config --no-enable-swift-package-manager
+      - name: Enable Swift Package Manager
+        run: flutter config --enable-swift-package-manager
 
       - name: Create assets directory and .env file
         run: |
           mkdir -p assets
           echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > assets/.env
 
+      - name: Patch AppFrameworkInfo MinimumOSVersion
+        run: |
+          plutil -replace MinimumOSVersion -string "15.0" ios/Flutter/AppFrameworkInfo.plist 2>/dev/null || true
+
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Install CocoaPods
+      - name: Install CocoaPods (if Podfile exists)
         run: |
-          cd ios
-          pod install --repo-update
+          if [ -f "ios/Podfile" ]; then
+            cd ios
+            pod install --repo-update
+          fi
 
       - name: Build iOS App with Xcode (Unsigned Sideload)
         run: |
@@ -67,16 +73,21 @@ jobs:
             echo "Error: Runner.app not found!"
             exit 1
           fi
-          cp -r "$APP_PATH" build/ios/iphoneos/Runner.app
+          rm -rf build/ios/iphoneos/Runner.app
+          cp -a "$APP_PATH" build/ios/iphoneos/Runner.app
           if [ -f "ios/Runner/GoogleService-Info.plist" ]; then
             cp "ios/Runner/GoogleService-Info.plist" build/ios/iphoneos/Runner.app/
             echo "Copied GoogleService-Info.plist into Runner.app"
           fi
+          # Xoa cac code signature cu neu co de Sideloadly re-sign sach se
+          rm -rf build/ios/iphoneos/Runner.app/_CodeSignature
+          find build/ios/iphoneos/Runner.app/Frameworks -name "_CodeSignature" -exec rm -rf {} + 2>/dev/null || true
+
           cd build/ios/iphoneos
-          rm -rf Payload
+          rm -rf Payload MunAI_Tracker.ipa
           mkdir Payload
-          cp -r Runner.app Payload/
-          zip -r MunAI_Tracker.ipa Payload
+          cp -a Runner.app Payload/
+          zip -r -y MunAI_Tracker.ipa Payload
           
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
