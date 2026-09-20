@@ -9,12 +9,16 @@ class ShimmerLoadingV2 extends StatelessWidget {
     required this.isLoading,
     required this.child,
     this.loadingWidget,
+    this.baseColor,
+    this.highlightColor,
     super.key,
   });
 
   final Widget child;
   final Widget? loadingWidget;
   final bool isLoading;
+  final Color? baseColor;
+  final Color? highlightColor;
 
   @override
   Widget build(BuildContext context) {
@@ -24,16 +28,14 @@ class ShimmerLoadingV2 extends StatelessWidget {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    final baseColor = isDark 
-        ? AppColorsV2.neutral700 
-        : AppColorsV2.neutral100;
-    final highlightColor = isDark 
-        ? AppColorsV2.neutral600 
-        : AppColorsV2.neutral50;
+    final effectiveBaseColor = baseColor ??
+        (isDark ? AppColorsV2.neutral700 : AppColorsV2.neutral100);
+    final effectiveHighlightColor = highlightColor ??
+        (isDark ? AppColorsV2.neutral600 : AppColorsV2.neutral50);
 
     return pk_shimmer.Shimmer.fromColors(
-      baseColor: baseColor,
-      highlightColor: highlightColor,
+      baseColor: effectiveBaseColor,
+      highlightColor: effectiveHighlightColor,
       child: loadingWidget ?? child,
     );
   }

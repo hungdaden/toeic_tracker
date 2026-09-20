@@ -67,3 +67,5 @@ flutter_01.png
 flutter_01.log
 build_log.txt
 build_logs.txt
+
+*.ipa

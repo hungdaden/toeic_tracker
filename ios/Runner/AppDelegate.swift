@@ -3,6 +3,8 @@ import UIKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
+  private var registeredRegistries = NSHashTable<AnyObject>.weakObjects()
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -11,6 +13,10 @@ import UIKit
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
-    GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    let registry = engineBridge.pluginRegistry
+    if !registeredRegistries.contains(registry) {
+      registeredRegistries.add(registry)
+      GeneratedPluginRegistrant.register(with: registry)
+    }
   }
 }

@@ -8,13 +8,13 @@ import 'providers/user_provider.dart';
 import 'providers/auth_provider.dart';
 import 'screens/main_screen.dart';
 import 'screens/maintenance_screen.dart';
+import 'screens/launch_screen.dart';
 import 'widgets/dynamic_island_notification.dart';
 import 'theme/app_theme.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
-  print('APP_START: Hàm main đang chạy...');
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await dotenv.load(fileName: "assets/.env");
@@ -22,7 +22,13 @@ void main() async {
     debugPrint('Warning: Không thể load assets/.env: $e');
   }
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e, stack) {
+    debugPrint('Firebase.initializeApp error: $e\n$stack');
+  }
 
   // Kích hoạt bộ nhớ đệm Local (Cache) an toàn
   try {
@@ -51,7 +57,14 @@ void main() async {
 }
 
 class ToeicTrackerApp extends StatefulWidget {
-  const ToeicTrackerApp({super.key});
+  final bool skipLaunchScreen;
+  final Duration? launchDuration;
+
+  const ToeicTrackerApp({
+    super.key,
+    this.skipLaunchScreen = false,
+    this.launchDuration,
+  });
 
   @override
   State<ToeicTrackerApp> createState() => _ToeicTrackerAppState();
@@ -60,46 +73,57 @@ class ToeicTrackerApp extends StatefulWidget {
 class _ToeicTrackerAppState extends State<ToeicTrackerApp> {
   bool _isMaintenance = false;
   bool _isFirstLoad = true;
+  late bool _showLaunchScreen;
 
   @override
   void initState() {
     super.initState();
+    _showLaunchScreen = !widget.skipLaunchScreen;
     _listenMaintenanceMode();
   }
 
   void _listenMaintenanceMode() {
-    FirebaseFirestore.instance
-        .collection('config')
-        .doc('system')
-        .snapshots()
-        .listen(
-          (snapshot) {
-            if (snapshot.exists) {
-              final data = snapshot.data() as Map<String, dynamic>;
-              final newStatus = data['maintenanceMode'] == true;
+    try {
+      FirebaseFirestore.instance
+          .collection('config')
+          .doc('system')
+          .snapshots()
+          .listen(
+            (snapshot) {
+              if (snapshot.exists) {
+                final data = snapshot.data() as Map<String, dynamic>;
+                final newStatus = data['maintenanceMode'] == true;
 
-              // Nếu Admin vừa bật bảo trì (Status đổi từ false sang true)
-              if (newStatus && !_isMaintenance && !_isFirstLoad) {
-                _showMaintenanceNotification();
+                // Nếu Admin vừa bật bảo trì (Status đổi từ false sang true)
+                if (newStatus && !_isMaintenance && !_isFirstLoad) {
+                  _showMaintenanceNotification();
+                }
+
+                if (mounted) {
+                  setState(() {
+                    _isMaintenance = newStatus;
+                    _isFirstLoad = false;
+                  });
+                }
               }
-
-              if (mounted) {
+            },
+            onError: (error) {
+              debugPrint('Maintenance mode listener error: $error');
+              if (mounted && _isFirstLoad) {
                 setState(() {
-                  _isMaintenance = newStatus;
                   _isFirstLoad = false;
                 });
               }
-            }
-          },
-          onError: (error) {
-            debugPrint('Maintenance mode listener error: $error');
-            if (mounted && _isFirstLoad) {
-              setState(() {
-                _isFirstLoad = false;
-              });
-            }
-          },
-        );
+            },
+          );
+    } catch (e) {
+      debugPrint('Firestore listen maintenance mode error: $e');
+      if (mounted && _isFirstLoad) {
+        setState(() {
+          _isFirstLoad = false;
+        });
+      }
+    }
   }
 
   void _showMaintenanceNotification() {
@@ -144,7 +168,27 @@ class _ToeicTrackerAppState extends State<ToeicTrackerApp> {
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: _isMaintenance ? const MaintenanceScreen() : const MainScreen(),
+      home: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 600),
+        switchInCurve: Curves.easeInOut,
+        switchOutCurve: Curves.easeInOut,
+        child: _showLaunchScreen
+            ? LaunchScreen(
+                key: const ValueKey('mun_ai_launch_screen'),
+                duration:
+                    widget.launchDuration ?? const Duration(milliseconds: 2700),
+                onFinish: () {
+                  if (mounted) {
+                    setState(() {
+                      _showLaunchScreen = false;
+                    });
+                  }
+                },
+              )
+            : (_isMaintenance
+                  ? const MaintenanceScreen(key: ValueKey('maintenance_screen'))
+                  : const MainScreen(key: ValueKey('main_screen'))),
+      ),
     );
   }
 }

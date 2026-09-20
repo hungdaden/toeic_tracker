@@ -64,7 +64,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '865926846836',
     projectId: 'toeic-tracker-52828',
     storageBucket: 'toeic-tracker-52828.firebasestorage.app',
-    iosBundleId: 'com.example.toeicTracker',
+    iosBundleId: 'com.hungdaden.toeicTracker',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
